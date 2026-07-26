@@ -256,6 +256,24 @@ document.addEventListener('mouseleave', () => {
   fadeRemoveTooltip();
 });
 
+// 全局自动隐藏（悬停类模式）：指针离开「气泡 ∪ 触发目标」后，按可配置延时淡出。
+// 这样无论怎么切换/离开链接，气泡都会可靠消失；回到链接或气泡则取消待隐藏，不闪烁。
+document.addEventListener('mousemove', (e) => {
+  if (!tooltip || !config.enabled) return;
+  if (config.triggerMode === 'select') return; // 划词模式由“点击外部/收起”关闭，见下方
+  if (e.target && e.target.closest && e.target.closest('#hover-summary-tooltip')) { clearTimeout(hideTimer); return; }
+  if (activeTarget && activeTarget.contains(e.target)) { clearTimeout(hideTimer); return; }
+  scheduleHide();
+});
+
+// 划词模式：点击气泡/胶囊以外的任意位置即关闭（自然“读完即走”）；胶囊本身排除，避免误关
+document.addEventListener('mousedown', (e) => {
+  if (!tooltip || !config.enabled) return;
+  if (config.triggerMode !== 'select') return;
+  if (e.target && e.target.closest && e.target.closest('#hover-summary-tooltip, #hs-pill')) return;
+  removeTooltip();
+});
+
 function getMeaningfulTarget(el) {
   if (!el) return null;
   if (el.id && el.id.startsWith('hover-summary-')) return null;
