@@ -70,92 +70,100 @@
     .btn-save:hover { background: #1557b0; }
     .status { text-align: center; font-size: 12px; margin-top: 8px; color: #4caf50; opacity: 0; transition: opacity 0.3s; }
     .status.show { opacity: 1; }
+    /* 顶部：语言 + 主题 一排 */
+    .toprow { display: flex; gap: 12px; margin-bottom: 12px; }
+    .toprow .field { flex: 1; min-width: 0; }
+    .toprow label { display: block; font-size: 13px; font-weight: 600; color: #555; margin-bottom: 4px; }
+    .toprow select { width: 100%; }
   </style>
 </head>
 <body>
   <h2>🤖 Hover Summary</h2>
-  <div class="sub">网页/文档划词悬浮 AI 总结</div>
+  <div class="sub" data-i18n="sub">网页/文档划词悬浮 AI 总结</div>
+
+  <!-- 顶部一排：语言（统一控制展示+摘要） + 主题 -->
+  <div class="toprow">
+    <div class="field">
+      <label for="ui-lang" data-i18n="language">语言</label>
+      <select id="ui-lang">
+        <option value="auto" data-i18n="lang.auto">跟随系统</option>
+        <option value="zh-CN">中文（简体）</option>
+        <option value="en">English</option>
+        <option value="ja">日本語</option>
+        <option value="ko">한국어</option>
+        <option value="fr">Français</option>
+        <option value="de">Deutsch</option>
+        <option value="es">Español</option>
+        <option value="ru">Русский</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="theme" data-i18n="theme">主题</label>
+      <select id="theme" style="width:100%;">
+        <option value="auto" data-i18n="theme.auto">跟随系统</option>
+        <option value="light" data-i18n="theme.light">亮色</option>
+        <option value="dark" data-i18n="theme.dark">暗色</option>
+      </select>
+    </div>
+  </div>
 
   <!-- 通用 -->
   <div class="section">
     <div class="row">
-      <label for="enabled">启用扩展</label>
+      <label for="enabled" data-i18n="enabled">启用扩展</label>
       <label class="switch"><input type="checkbox" id="enabled"><span class="slider"></span></label>
     </div>
-    <label for="model">模型来源</label>
+    <label for="model" data-i18n="modelSource">模型来源</label>
     <select id="model">
-      <option value="agnes">云端 API — Agnes</option>
-      <option value="nvidia">云端 API — NVIDIA NIM</option>
-      <option value="local">本地模型 — oMLX / LM Studio / Ollama（离线）</option>
-      <option value="chrome">本地 Chrome 内置 AI — Gemini Nano（离线免费）</option>
-      <option value="public">云端 API — 公开大模型（DeepSeek/通义/混元/文心）</option>
+      <option value="agnes" data-i18n="p.agnes">云端 API — Agnes</option>
+      <option value="nvidia" data-i18n="p.nvidia">云端 API — NVIDIA NIM</option>
+      <option value="local" data-i18n="p.local">本地模型 — oMLX / LM Studio / Ollama（离线）</option>
+      <option value="chrome" data-i18n="p.chrome">本地 Chrome 内置 AI — Gemini Nano（离线免费）</option>
+      <option value="public" data-i18n="p.public">云端 API — 公开大模型（DeepSeek/通义/混元/文心）</option>
     </select>
-    <div class="hint">具体模型在下方对应面板中选择</div>
+    <div class="hint" data-i18n="modelHint">具体模型在下方对应面板中选择</div>
 
-    <label for="trigger-mode" style="margin-top:10px;display:block;">触发方式</label>
+    <label for="trigger-mode" style="margin-top:10px;display:block;" data-i18n="triggerMode">触发方式</label>
     <select id="trigger-mode">
-      <option value="select">划词（选中文字后点 💡 总结）</option>
-      <option value="hover">悬停即触发</option>
-      <option value="shift+hover">Shift + 悬停</option>
+      <option value="select" data-i18n="t.select">划词（选中文字后点 💡 总结）</option>
+      <option value="hover" data-i18n="t.hover">悬停即触发</option>
+      <option value="shift+hover" data-i18n="t.shift">Shift + 悬停</option>
     </select>
 
-    <div class="row" style="margin-top:10px;">
-      <label for="theme">主题</label>
-      <select id="theme" style="width:auto;">
-        <option value="auto">跟随系统</option>
-        <option value="light">亮色</option>
-        <option value="dark">暗色</option>
-      </select>
-    </div>
-
-    <label for="max-length" style="display:block;">送入模型的最大字数：<span id="maxlen-value">2000</span></label>
+    <label for="max-length" style="display:block;margin-top:10px;"><span data-i18n="maxLength">送入模型的最大字数</span>：<span id="maxlen-value">2000</span></label>
     <input type="range" id="max-length" min="500" max="4000" step="100" value="2000">
 
-    <label for="hover-delay" style="display:block;margin-top:8px;">悬停触发延迟：<span id="delay-value">800</span>ms</label>
+    <label for="hover-delay" style="display:block;margin-top:8px;"><span data-i18n="hoverDelay">悬停触发延迟</span>：<span id="delay-value">800</span>ms</label>
     <input type="range" id="hover-delay" min="300" max="2000" step="100" value="800">
 
-    <label for="output-lang" style="display:block;margin-top:10px;">摘要输出语言</label>
-    <select id="output-lang">
-      <option value="zh-CN">中文（简体）</option>
-      <option value="en">English（默认）</option>
-      <option value="ja">日本語</option>
-      <option value="ko">한국어</option>
-      <option value="fr">Français</option>
-      <option value="de">Deutsch</option>
-      <option value="es">Español</option>
-      <option value="ru">Русский</option>
-    </select>
-    <div class="hint">默认英语；气泡界面也会随之本地化。</div>
-
-    <label for="bubble-hide-delay" style="display:block;margin-top:10px;">气泡消失时间：<span id="hide-value">800</span>ms</label>
+    <label for="bubble-hide-delay" style="display:block;margin-top:10px;"><span data-i18n="bubbleHide">气泡消失时间</span>：<span id="hide-value">800</span>ms</label>
     <input type="range" id="bubble-hide-delay" min="200" max="3000" step="100" value="800">
-    <div class="hint">鼠标离开气泡后的保留（淡出）时长；调大切换链接更顺滑。</div>
+    <div class="hint" data-i18n="bubbleHideHint">鼠标离开气泡后的保留（淡出）时长；调大切换链接更顺滑。</div>
 
     <div class="row" style="margin-top:12px;">
-      <label for="dup-check">🔍 换皮检测<br><small style="color:#999;font-weight:400;">悬停时自动检测是否为换皮内容</small></label>
+      <label for="dup-check"><span data-i18n="dup">🔍 换皮检测</span><br><small style="color:#999;font-weight:400;" data-i18n="dupSub">悬停时自动检测是否为换皮内容</small></label>
       <label class="switch"><input type="checkbox" id="dup-check"><span class="slider"></span></label>
     </div>
-    <label for="dup-endpoint" style="display:block;margin-top:4px;">检测服务地址</label>
+    <label for="dup-endpoint" style="display:block;margin-top:4px;" data-i18n="dupEndpoint">检测服务地址</label>
     <input type="text" id="dup-endpoint" value="http://127.0.0.1:8765" placeholder="http://127.0.0.1:8765">
-    <div class="hint">需先运行 <code>python server.py</code>（在 story-duplicate-detector 目录）</div>
   </div>
 
   <!-- 模型配置 -->
   <div class="section">
     <div class="model-config" id="cfg-agnes">
-      <label>Agnes API Key</label>
+      <label data-i18n="m.agnesKey">Agnes API Key</label>
       <input type="password" id="agnes-key" placeholder="sk-...">
-      <label style="margin-top:8px;display:block;">Agnes 模型名</label>
+      <label style="margin-top:8px;display:block;" data-i18n="m.agnesModel">Agnes 模型名</label>
       <input type="text" id="agnes-model" value="agnes-2.0-flash">
-      <div class="hint">端点: apihub.agnes-ai.com</div>
-      <button class="test-btn" data-provider="agnes">测试连接</button>
+      <div class="hint">apihub.agnes-ai.com</div>
+      <button class="test-btn" data-provider="agnes" data-i18n="testConn">测试连接</button>
       <div class="test-status" id="test-agnes"></div>
     </div>
 
     <div class="model-config" id="cfg-nvidia">
-      <label>NVIDIA NIM API Key</label>
+      <label data-i18n="m.nvidiaKey">NVIDIA NIM API Key</label>
       <input type="password" id="nvidia-key" placeholder="nvapi-...">
-      <label style="margin-top:8px;display:block;">NVIDIA 模型</label>
+      <label style="margin-top:8px;display:block;" data-i18n="m.nvidiaModel">NVIDIA 模型</label>
       <select id="nvidia-model">
         <optgroup label="OpenAI（推理·推荐）">
           <option value="openai/gpt-oss-120b">GPT-OSS 120B（推荐·质量最佳）</option>
@@ -185,28 +193,28 @@
           <option value="nvidia/nemotron-3-ultra-550b-a55b">Nemotron 3 Ultra 550B</option>
         </optgroup>
       </select>
-      <div class="hint">端点: integrate.api.nvidia.com</div>
-      <button class="test-btn" data-provider="nvidia">测试连接</button>
+      <div class="hint">integrate.api.nvidia.com</div>
+      <button class="test-btn" data-provider="nvidia" data-i18n="testConn">测试连接</button>
       <div class="test-status" id="test-nvidia"></div>
     </div>
 
     <div class="model-config" id="cfg-local">
       <div class="test-status" id="detect-local" style="margin-top:0;"></div>
-      <label style="margin-top:8px;display:block;">本地模型（自动探测服务并列出）</label>
+      <label style="margin-top:8px;display:block;" data-i18n="m.localModel">本地模型（自动探测服务并列出）</label>
       <select id="local-model" style="width:100%;padding:6px;font-size:13px;"></select>
-      <button type="button" id="local-refresh" style="margin-top:6px;padding:4px 10px;font-size:12px;cursor:pointer;">🔄 重新探测 / 刷新列表</button>
-      <label style="margin-top:8px;display:block;">服务地址（自动探测填充，无需手填）</label>
+      <button type="button" id="local-refresh" style="margin-top:6px;padding:4px 10px;font-size:12px;cursor:pointer;" data-i18n="refreshModels">🔄 重新探测 / 刷新列表</button>
+      <label style="margin-top:8px;display:block;" data-i18n="m.endpoint">服务地址（自动探测填充，无需手填）</label>
       <input type="text" id="local-endpoint" value="" placeholder="打开此面板时自动探测…">
-      <div class="hint">自动探测 oMLX(8000) / LM Studio(1234) / Ollama(11434) / llama.cpp(8080)；本地无需 Key。</div>
-      <button type="button" id="local-load" style="width:100%;margin-top:8px;padding:7px;border:1px solid #1a73e8;background:#1a73e8;color:#fff;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">✅ 确认并加载此模型</button>
-      <div class="hint" style="margin-top:4px;">点此即把设置写入并只把<b>选中的模型</b>载入 oMLX 内存（oMLX 会自动淘汰其它模型，不占多余内存）。之后总结都只用它。</div>
+      <div class="hint" data-i18n="m.endpointHint">自动探测 oMLX(8000) / LM Studio(1234) / Ollama(11434) / llama.cpp(8080)；本地无需 Key。</div>
+      <button type="button" id="local-load" style="width:100%;margin-top:8px;padding:7px;border:1px solid #1a73e8;background:#1a73e8;color:#fff;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;" data-i18n="loadModel">✅ 确认并加载此模型</button>
+      <div class="hint" style="margin-top:4px;" data-i18n="m.loadHint">点此即把设置写入并只把<b>选中的模型</b>载入 oMLX 内存（oMLX 会自动淘汰其它模型，不占多余内存）。之后总结都只用它。</div>
       <div class="test-status" id="load-local"></div>
-      <button class="test-btn" data-provider="local" style="margin-top:8px;">测试连接</button>
+      <button class="test-btn" data-provider="local" style="margin-top:8px;" data-i18n="testConn">测试连接</button>
       <div class="test-status" id="test-local"></div>
     </div>
 
     <div class="model-config" id="cfg-public">
-      <label>服务商</label>
+      <label data-i18n="m.publicPreset">服务商</label>
       <select id="public-preset">
         <option value="deepseek">DeepSeek（推荐·稳定·中文好）</option>
         <option value="qwen">阿里通义千问</option>
@@ -214,29 +222,29 @@
         <option value="baidu">百度文心</option>
         <option value="pollinations">Pollinations（免密钥兜底）</option>
       </select>
-      <label style="margin-top:8px;display:block;">端点（OpenAI 兼容，可改）</label>
+      <label style="margin-top:8px;display:block;" data-i18n="m.publicEndpoint">端点（OpenAI 兼容，可改）</label>
       <input type="text" id="public-endpoint" value="https://api.deepseek.com/chat/completions">
-      <label style="margin-top:8px;display:block;">模型名</label>
+      <label style="margin-top:8px;display:block;" data-i18n="m.publicModel">模型名</label>
       <input type="text" id="public-model" value="deepseek-chat">
-      <label style="margin-top:8px;display:block;">API Key</label>
+      <label style="margin-top:8px;display:block;" data-i18n="m.publicKey">API Key</label>
       <input type="password" id="public-key" placeholder="按所选服务商填写">
       <div class="hint" id="public-key-hint">DeepSeek API Key（官网注册即送免费额度）</div>
-      <button class="test-btn" data-provider="public">测试连接</button>
+      <button class="test-btn" data-provider="public" data-i18n="testConn">测试连接</button>
       <div class="test-status" id="test-public"></div>
-      <button class="speed-btn" id="speed-test">⚡ 测速并选用最快模型</button>
+      <button class="speed-btn" id="speed-test" data-i18n="speedTest">⚡ 测速并选用最快模型</button>
       <div class="test-status" id="speed-public"></div>
     </div>
 
     <div class="model-config" id="cfg-chrome">
-      <div class="hint" style="margin-top:0;">调用 Chrome 浏览器内置的 Gemini Nano（设备端运行）：<b>无需 Key、无需服务器、离线、隐私不出本机</b>。摘要/要点走专用 Summarizer，解释/翻译/追问走 Prompt API。</div>
-      <button type="button" id="chrome-check" style="width:100%;margin-top:8px;padding:7px;border:1px solid #1a73e8;background:#1a73e8;color:#fff;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">🔍 检查/下载 Chrome 内置模型</button>
+      <div class="hint" style="margin-top:0;" data-i18n="chromeHint">调用 Chrome 浏览器内置的 Gemini Nano（设备端运行）：<b>无需 Key、无需服务器、离线、隐私不出本机</b>。摘要/要点走专用 Summarizer，解释/翻译/追问走 Prompt API。</div>
+      <button type="button" id="chrome-check" style="width:100%;margin-top:8px;padding:7px;border:1px solid #1a73e8;background:#1a73e8;color:#fff;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;" data-i18n="chromeCheck">🔍 检查/下载 Chrome 内置模型</button>
       <div class="test-status" id="check-chrome"></div>
-      <div class="hint" style="margin-top:6px;">若显示「不可用」：需 Chrome 138+，并到 <code>chrome://flags</code> 开启 <code>optimization-guide-on-device-model</code> 与 <code>prompt-api-for-gemini-nano</code>（多为 Dev/Canary 版本），首次会下载约 1.7GB 模型。中文总结质量偏弱，建议作为备选（不可用时自动回退到其它已配置模型）。</div>
+      <div class="hint" style="margin-top:6px;" data-i18n="chromeUnavail">若显示「不可用」：Chrome 内置 AI 是“内置 AI API”，<b>无法在扩展后台（Service Worker）运行</b>，本扩展已通过主世界桥接调用；需 Chrome 138+ 桌面端，并到 chrome://flags 开启 optimization-guide-on-device-model 与 prompt-api-for-gemini-nano（多为 Dev/Canary），首次下载约 1.7GB 模型。中文质量偏弱，建议作为备选（不可用时自动回退）。</div>
     </div>
   </div>
 
-  <button class="btn-save" id="save">保存设置</button>
-  <div class="status" id="status">✅ 已保存</div>
+  <button class="btn-save" id="save" data-i18n="save">保存设置</button>
+  <div class="status" id="status" data-i18n="saved">✅ 已保存</div>
 
   <script src="popup.js"></script>
 </body>

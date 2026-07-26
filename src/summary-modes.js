@@ -193,5 +193,18 @@
     return { system: messages[0].content, messages, maxTokens: meta.maxTokens, temperature: meta.temperature };
   }
 
-  return { SUMMARY_MODES, MODE_ORDER, detectLang, buildMessages, I18N, LANGUAGES };
+  // 解析有效输出语言：
+  // - 显式指定（auto 以外）且受支持 → 原样返回
+  // - 'auto' 或未知 → 跟随系统语言（navigator.language），映射到受支持语言，缺省回退英文
+  function resolveLang(lang) {
+    if (lang && lang !== 'auto' && I18N[lang]) return lang;
+    let sys = 'en';
+    if (typeof navigator !== 'undefined' && navigator.language) sys = navigator.language;
+    else if (typeof self !== 'undefined' && self.navigator && self.navigator.language) sys = self.navigator.language;
+    const primary = (sys || 'en').split('-')[0].toLowerCase();
+    const MAP = { zh: 'zh-CN', en: 'en', ja: 'ja', ko: 'ko', fr: 'fr', de: 'de', es: 'es', ru: 'ru' };
+    return MAP[primary] || 'en';
+  }
+
+  return { SUMMARY_MODES, MODE_ORDER, detectLang, buildMessages, I18N, LANGUAGES, resolveLang };
 });

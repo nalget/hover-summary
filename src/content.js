@@ -53,6 +53,14 @@ function loadConfig() {
 }
 function applyConfig(cfg) {
   config = Object.assign(config, cfg);
+  // 统一语言：优先用弹窗写入的 lang，解析出有效 outputLang（供界面文案与摘要指令使用）。
+  // summary-modes.js 作为 content script 先加载，已挂到 window.HS_MODES，这里可直接用其 resolveLang。
+  const resolve = (window.HS_MODES && window.HS_MODES.resolveLang) || null;
+  if (config.lang) {
+    config.outputLang = resolve ? resolve(config.lang) : (config.outputLang || 'en');
+  } else if (!config.outputLang) {
+    config.outputLang = 'en';
+  }
   if (pill) pill.style.display = config.enabled ? '' : 'none';
 }
 

@@ -3,7 +3,7 @@
 
 // 复用模式定义（与 content.js 同源，避免逻辑分叉）
 importScripts('summary-modes.js');
-const { buildMessages } = self.HS_MODES;
+const { buildMessages, resolveLang } = self.HS_MODES;
 
 const DEFAULT_CONFIG = {
   enabled: true,
@@ -12,7 +12,8 @@ const DEFAULT_CONFIG = {
   maxLength: 2000, // 送入模型的文本上限
   hoverDelay: 800,
   triggerMode: 'select', // select | hover | shift+hover
-  outputLang: 'en', // 摘要输出语言（默认英语）；可选 zh-CN/ja/ko/fr/de/es/ru
+  lang: 'auto', // 统一展示/摘要语言：auto=跟随系统，或 zh-CN/en/ja/ko/fr/de/es/ru
+  outputLang: 'en', // 由 lang 解析得到的有效输出语言（内部用）
   bubbleHideDelay: 800, // 鼠标离开气泡后的保留(淡出)时间 ms
   duplicateCheck: true, // 悬停时并行检测换皮
   duplicateEndpoint: 'http://127.0.0.1:8765', // 本地换皮检测服务
@@ -117,8 +118,9 @@ async function getConfig() {
   cfg.nvidia = { ...DEFAULT_CONFIG.nvidia, ...(cfg.nvidia || {}) };
   cfg.local = { ...DEFAULT_CONFIG.local, ...(cfg.local || {}) };
   cfg.public = { ...DEFAULT_CONFIG.public, ...(cfg.public || {}) };
-  // 应用顶层标量默认（outputLang / bubbleHideDelay 等），避免旧存储缺字段
-  if (!cfg.outputLang) cfg.outputLang = DEFAULT_CONFIG.outputLang;
+  // 统一语言：lang 优先；旧存储仅有 outputLang 时沿用之（向后兼容），否则默认 auto
+  cfg.lang = cfg.lang || cfg.outputLang || DEFAULT_CONFIG.lang;
+  cfg.outputLang = resolveLang(cfg.lang);
   if (!cfg.bubbleHideDelay) cfg.bubbleHideDelay = DEFAULT_CONFIG.bubbleHideDelay;
   cfg.chrome = { ...DEFAULT_CONFIG.chrome, ...(cfg.chrome || {}) };
   // 迁移：旧版把损坏/已删除的模型（如 Gemma-4-E4B-4bit）写进了存储，清空让用户重新选择
@@ -140,7 +142,7 @@ async function getConfig() {
 // ── 消息路由 ──────────────────────────────────────────────
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'summarize') {
-    handleSummarize(request)
+    handleSummarize(request, sender)
       .then(sendResponse)
       .catch((e) => sendResponse({ success: false, error: e.message, code: 'UNKNOWN' }));
     return true;
@@ -365,91 +367,47 @@ async function loadLocalModel(endpoint, model) {
 }
 
 // ── Chrome 内置 AI（Gemini Nano，设备端离线）─────────────
-// 走 Service Worker 扩展上下文直接调用 window.ai（Summarizer / LanguageModel），
-// 无需 Key、无服务端、离线、隐私不出本机。不可用（未开启 flag / 未下载模型 /
-// 非桌面端）时抛 NO_CHROME_AI，由 handleSummarize 自动回退到其它 provider。
-async function callChromeAI(mode, payload) {
-  const { text, messages, question, history } = payload || {};
-  const start = performance.now();
-  const LM = self.LanguageModel;
-  const Sum = self.Summarizer;
-
-  // 摘要 / 要点 → 专用 Summarizer API（质量与速度优于通用 Prompt）
-  if ((mode === 'summary' || mode === 'points') && Sum) {
-    const type = mode === 'summary' ? 'tldr' : 'key-points';
-    const opts = { type, format: 'markdown', length: 'medium' };
-    let availability;
-    try {
-      availability = await Sum.availability(opts).catch(() => 'unavailable');
-    } catch (e) {
-      availability = 'unavailable';
-    }
-    if (availability === 'unavailable') {
-      const e = new Error('Chrome 内置 AI 不可用（Summarizer 不支持此设备/语言，或未开启 flag）');
-      e.code = 'NO_CHROME_AI';
-      throw e;
-    }
-    let summarizer;
-    try {
-      summarizer = await Sum.create({
-        ...opts,
-        monitor(m) { m.addEventListener('downloadprogress', () => {}); }
-      });
-      if (availability === 'downloadable' || availability === 'downloading') {
-        if (summarizer.ready) await summarizer.ready;
+// 重要：Chrome 内置 AI（Prompt API / Summarizer）属于“内置 AI API”，
+// 按 Chrome 官方文档 **无法在 Web Worker / 扩展 Service Worker 中使用**，
+// 只能在顶级窗口或页面主世界（MAIN world）访问。因此后台 Service Worker 里
+// self.LanguageModel / self.Summarizer 恒为 undefined。
+// 解决方案：把实际调用代理到“主世界桥接脚本”(chrome-ai-bridge.js)，
+// 由它访问 window.LanguageModel / window.Summarizer 并返回结果。
+// 弹窗“检查/下载”也直接走弹窗窗口（window 上下文）检测/下载。
+async function callChromeAI(mode, payload, tabId) {
+  if (!tabId) {
+    const e = new Error('Chrome 内置 AI 需在页面主世界调用（缺少来源标签页）');
+    e.code = 'NO_CHROME_AI';
+    throw e;
+  }
+  let r;
+  try {
+    r = await chrome.tabs.sendMessage(tabId, {
+      action: 'chromeAiCall',
+      payload: {
+        mode,
+        text: payload.text,
+        messages: payload.messages,
+        question: payload.question,
+        history: payload.history
       }
-    } catch (e) {
-      const err = new Error('创建/下载 Summarizer 失败：' + e.message);
-      err.code = 'NO_CHROME_AI';
-      throw err;
-    }
-    const out = await summarizer.summarize(text).catch((e) => {
-      throw new Error('Summarizer 推理失败：' + e.message);
     });
-    if (summarizer.destroy) summarizer.destroy();
-    const elapsed = parseFloat(((performance.now() - start) / 1000).toFixed(2));
-    return { summary: (out || '').trim(), elapsed };
-  }
-
-  // 解释 / 翻译 / 追问 → 通用 Prompt API（LanguageModel）
-  if (!LM) {
-    const e = new Error('此 Chrome 版本未开放内置 AI（需在 chrome://flags 开启 prompt-api-for-gemini-nano 且为 138+）');
-    e.code = 'NO_CHROME_AI';
-    throw e;
-  }
-  let availability;
-  try {
-    availability = await LM.availability().catch(() => 'unavailable');
   } catch (e) {
-    availability = 'unavailable';
-  }
-  if (availability === 'unavailable') {
-    const e = new Error('Chrome 内置 AI 不可用（模型未下载或不支持此设备）');
-    e.code = 'NO_CHROME_AI';
-    throw e;
-  }
-  let session;
-  try {
-    session = await LM.create({
-      systemPrompt: (messages && messages[0] && messages[0].content) || '你是一个简洁的阅读助手。',
-      monitor(m) { m.addEventListener('downloadprogress', () => {}); }
-    });
-    if (availability === 'downloadable' || availability === 'downloading') {
-      if (session.ready) await session.ready;
-    }
-  } catch (e) {
-    const err = new Error('创建/下载 LanguageModel 失败：' + e.message);
+    const err = new Error('Chrome 内置 AI 桥接不可用：' + e.message);
     err.code = 'NO_CHROME_AI';
     throw err;
   }
-  // 把多轮（追问含原文/历史）拼成单次 prompt 发给会话
-  const promptText = (messages || []).slice(1).map((m) => m.content).join('\n');
-  const out = await session.prompt(promptText || question || '').catch((e) => {
-    throw new Error('Prompt 推理失败：' + e.message);
-  });
-  if (session.destroy) session.destroy();
-  const elapsed = parseFloat(((performance.now() - start) / 1000).toFixed(2));
-  return { summary: (out || '').trim(), elapsed };
+  if (!r) {
+    const e = new Error('Chrome 内置 AI 桥接无响应（页面可能未注入主世界脚本）');
+    e.code = 'NO_CHROME_AI';
+    throw e;
+  }
+  if (r.error) {
+    const e = new Error(r.error);
+    e.code = r.code || 'NO_CHROME_AI';
+    throw e;
+  }
+  return { summary: r.summary, elapsed: r.elapsed };
 }
 
 // 选一个可用回退 provider：本地 oMLX > NVIDIA NIM > Agnes（按已配置情况）
@@ -505,7 +463,7 @@ async function checkChromeAI() {
 }
 
 // ── 主流程 ────────────────────────────────────────────────
-async function handleSummarize(req) {
+async function handleSummarize(req, sender) {
   const config = await getConfig();
   if (!config.enabled) return { success: false, error: '扩展已关闭，请在设置中开启', code: 'DISABLED' };
 
@@ -544,7 +502,7 @@ async function handleSummarize(req) {
     let result;
     if (isChrome) {
       try {
-        result = await callChromeAI(mode, { text, messages, question: req.question, history: req.history });
+        result = await callChromeAI(mode, { text, messages, question: req.question, history: req.history }, sender && sender.tab && sender.tab.id);
       } catch (e) {
         // 内置 AI 不可用 → 自动回退到其它已配置 provider（本地 oMLX > NVIDIA > Agnes）
         if (e.code === 'NO_CHROME_AI') {
