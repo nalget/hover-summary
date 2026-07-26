@@ -1,0 +1,51 @@
+{
+  "manifest_version": 3,
+  "name": "Hover Summary - AI 悬停摘要",
+  "version": "1.4.0",
+  "description": "在任意网页/文档划词，自动弹出 AI 摘要。支持摘要/要点/解释/翻译/追问五种模式，Agnes、NVIDIA NIM、本地 oMLX 多模型切换。悬停时自动检测换皮内容。",
+  "permissions": ["storage", "activeTab", "scripting", "commands", "tabs"],
+  "host_permissions": [
+    "<all_urls>",
+    "https://apihub.agnes-ai.com/*",
+    "https://integrate.api.nvidia.com/*",
+    "https://api.deepseek.com/*",
+    "https://dashscope.aliyuncs.com/*",
+    "https://api.hunyuan.cloud.tencent.com/*",
+    "https://aip.baidubce.com/*",
+    "https://text.pollinations.ai/*",
+    "http://127.0.0.1:8000/*",
+    "http://localhost:8000/*",
+    "http://127.0.0.1:8765/*",
+    "http://localhost:8765/*"
+  ],
+  "commands": {
+    "toggle-enabled": {
+      "suggested_key": { "default": "Ctrl+Shift+H", "mac": "Command+Shift+H" },
+      "description": "开启 / 关闭 悬停总结"
+    }
+  },
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/summary-modes.js", "src/content.js"],
+      "css": ["src/styles.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "src/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

@@ -1,0 +1,32 @@
+# 依赖 / 构建产物
+node_modules/
+dist/
+
+# 发布包（按需本地打包，不入库）
+*.zip
+
+# 旧版本备份（开发快照，非发布物）
+backups/
+
+# 基准测试（与扩展运行无关）
+bench/
+requirements.txt
+
+# 截图 / 二进制（仅 e2e 测试产物；保留 icons/ 扩展图标）
+test/*.png
+test/*.jpg
+test/*.gif
+
+# 用户脚本变体（独立于 MV3 扩展，另仓维护）
+hover-summary.user.js
+
+# 内部规划文档（非面向用户的仓库文档）
+PRODUCT.md
+PROJECT_PLAN.md
+PACKAGING.md
+USAGE.md
+
+# 操作系统 / 编辑器
+.DS_Store
+Thumbs.db
+*.swp
