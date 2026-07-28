@@ -16,7 +16,7 @@ const DEFAULT_CONFIG = {
   triggerMode: 'select', // select | hover | shift+hover
   lang: 'auto', // 统一展示/摘要语言：auto=跟随系统，或 zh-CN/en/ja/ko/fr/de/es/ru
   outputLang: 'en', // 由 lang 解析得到的有效输出语言（内部用）
-  bubbleHideDelay: 800, // 鼠标离开气泡后的保留(淡出)时间 ms
+  bubbleHideDelay: 3000, // 鼠标离开气泡后的保留(淡出)时间 ms（默认约 3 秒）
   duplicateCheck: true, // 悬停时并行检测换皮
   duplicateEndpoint: 'http://127.0.0.1:8765', // 本地换皮检测服务
   agnes: {

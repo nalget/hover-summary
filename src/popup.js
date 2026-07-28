@@ -10,7 +10,7 @@ const DEFAULT_CONFIG = {
   hoverDelay: 800,
   triggerMode: 'select',
   lang: 'auto', // 统一展示/摘要语言：auto=跟随系统；或 zh-CN/en/ja/ko/fr/de/es/ru（即时生效）
-  bubbleHideDelay: 800, // 鼠标离开气泡后的保留(淡出)时间 ms
+  bubbleHideDelay: 3000, // 鼠标离开气泡后的保留(淡出)时间 ms（默认约 3 秒）
   duplicateCheck: true,
   duplicateEndpoint: 'http://127.0.0.1:8765',
   agnes: { endpoint: 'https://apihub.agnes-ai.com/v1/chat/completions', apiKey: '', model: 'agnes-2.0-flash' },
@@ -380,7 +380,7 @@ chrome.storage.sync.get('hoverSummaryConfig', (data) => {
   const savedLang = stored.lang || stored.outputLang || cfg.lang || DEFAULT_CONFIG.lang || 'auto';
   uiLang.value = savedLang;
   applyPopupI18n(resolveLang(savedLang));
-  hideSlider.value = cfg.bubbleHideDelay || 800;
+  hideSlider.value = cfg.bubbleHideDelay || 3000;
   hideValue.textContent = hideSlider.value;
 
   $('agnes-key').value = cfg.agnes.apiKey || '';

@@ -154,6 +154,19 @@
 
 .hs-meta { margin-top: 8px !important; font-size: 11px !important; color: var(--hs-muted) !important; min-height: 0 !important; }
 
+/* 温和提示条（X/Twitter 等 JS 渲染站点） */
+.hs-notice {
+  margin-top: 8px !important;
+  padding: 6px 10px !important;
+  border-radius: 6px !important;
+  background: #fff8e1 !important;
+  color: #8a6d00 !important;
+  border: 1px solid #ffe08a !important;
+  font-size: 12px !important;
+  line-height: 1.4 !important;
+}
+.hs-theme-dark .hs-notice { background: #3a3320 !important; color: #f0d98a !important; border-color: #5a4f2a !important; }
+
 /* 复制按钮 */
 .hs-copy-btn {
   margin-top: 8px !important;

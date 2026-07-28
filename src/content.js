@@ -256,14 +256,23 @@ document.addEventListener('mouseleave', () => {
   fadeRemoveTooltip();
 });
 
-// 全局自动隐藏（悬停类模式）：指针离开「气泡 ∪ 触发目标」后，按可配置延时淡出。
-// 这样无论怎么切换/离开链接，气泡都会可靠消失；回到链接或气泡则取消待隐藏，不闪烁。
+// 全局自动隐藏（所有模式通用）：指针离开「气泡 ∪ 触发目标」后，按可配置延时淡出。
+// 只在“刚离开”的瞬间调度一次，之后鼠标继续移动也不再复位计时器 → 可靠地“不悬停约 N 秒后淡出”，不闪烁。
+let overBubbleOrTarget = false;
 document.addEventListener('mousemove', (e) => {
   if (!tooltip || !config.enabled) return;
-  if (config.triggerMode === 'select') return; // 划词模式由“点击外部/收起”关闭，见下方
-  if (e.target && e.target.closest && e.target.closest('#hover-summary-tooltip')) { clearTimeout(hideTimer); return; }
-  if (activeTarget && activeTarget.contains(e.target)) { clearTimeout(hideTimer); return; }
-  scheduleHide();
+  const onBubble = e.target && e.target.closest && e.target.closest('#hover-summary-tooltip');
+  const onTarget = activeTarget && activeTarget.contains(e.target);
+  if (onBubble || onTarget) {
+    overBubbleOrTarget = true;
+    clearTimeout(hideTimer);
+    return;
+  }
+  if (overBubbleOrTarget) {
+    overBubbleOrTarget = false;
+    scheduleHide(); // 刚离开 → 调度一次淡出
+  }
+  // 已在外部移动：不重复 reset 计时器，避免一直复位导致永不淡出
 });
 
 // 划词模式：点击气泡/胶囊以外的任意位置即关闭（自然“读完即走”）；胶囊本身排除，避免误关
@@ -364,11 +373,10 @@ function startPrefetch(text, href) {
         runSummarize();
       })
       .catch((err) => {
-        // 动态站点（X/Twitter 等）需 JS 渲染，无法抓取正文：直接给提示，不用锚文本硬总结
+        // 动态站点（X/Twitter 等）需 JS 渲染，无法抓取正文：温和提示 + 退回用链接可见文字摘要，不报错
         if (err && /JS_REQUIRED/i.test(err.message)) {
-          pf.error = '⚠️ 该页面需 JavaScript 渲染（如 X / Twitter），无法获取正文，已用链接文本。';
-          pf.done = true;
-          finishPrefetch(pf, { success: false, error: pf.error }, false);
+          pf.jsNotice = '⚠️ 该页面需 JavaScript 渲染（X / Twitter 等），无法获取正文，已改用链接文本摘要。';
+          runSummarize(); // 用锚文本(链接可见文字)做摘要
         } else {
           runSummarize(); // 其它抓取失败：退回用锚文本摘要
         }
@@ -457,6 +465,7 @@ function openBubble(text, anchor, initialMode) {
     } else if (pf.error) {
       state.prefetchError = pf.error;
     }
+    state.jsNotice = pf.jsNotice || null; // X/Twitter 等 JS 渲染站点的温和提示
   }
   tooltip = buildBubble();
   document.body.appendChild(tooltip);
@@ -471,6 +480,7 @@ function openBubble(text, anchor, initialMode) {
     tooltip._onLeaveClose = onLeaveClose;
   }
   setMode(initialMode || 'summary', true);
+  overBubbleOrTarget = true; // 气泡打开时鼠标在触发目标/气泡上，避免立即触发淡出
   // 链接摘要继承成功时补显来源 URL
   if (pfMatch && pf.href && pf.result) showSourceUrl(pf.href);
 
@@ -605,6 +615,11 @@ function buildBubble() {
 
   body.appendChild(dupBar);
   body.appendChild(summary);
+  // 温和提示条（X/Twitter 等 JS 渲染站点无法抓正文时显示）
+  const notice = document.createElement('div');
+  notice.className = 'hs-notice';
+  notice.style.display = 'none';
+  body.appendChild(notice);
   body.appendChild(follow);
   body.appendChild(meta);
   body.appendChild(copy);
@@ -682,6 +697,7 @@ function setMode(mode, isInitial) {
   const summaryEl = tooltip.querySelector('.hs-summary');
   const followEl = tooltip.querySelector('.hs-followup');
   const metaEl = tooltip.querySelector('.hs-meta');
+  renderNotice(state.jsNotice); // 温和提示（如 X/Twitter）在任意模式下都常驻显示
 
   if (mode === 'followup') {
     summaryEl.style.display = 'none';
@@ -762,6 +778,18 @@ function renderError(msg) {
   summaryEl.textContent = '❌ ' + msg;
   summaryEl.classList.add('hs-error-text');
   metaEl.textContent = '';
+}
+
+// 温和提示条（非致命）：X/Twitter 等 JS 渲染站点无法抓正文、改用链接文本摘要时显示
+function renderNotice(msg) {
+  const n = tooltip && tooltip.querySelector('.hs-notice');
+  if (!n) return;
+  if (msg) {
+    n.textContent = msg;
+    n.style.display = 'block';
+  } else {
+    n.style.display = 'none';
+  }
 }
 
 // 传输层致命错误（扩展上下文失效 / SW 无响应）：给出可一键刷新的恢复入口
