@@ -9,7 +9,9 @@ const DEFAULT_CONFIG = {
   enabled: true,
   model: 'chrome', // 默认用 Chrome 内置 Gemini Nano（设备端·免Key·离线）；不可用时自动回退
   theme: 'auto', // auto | light | dark
-  maxLength: 2000, // 送入模型的文本上限
+  maxLength: 2000, // 送入模型的文本上限（全局）
+  maxOutput: 800, // 单次摘要最大输出 token：防小模型陷入重复循环，可在设置里调小（如 0.5B 设 256）
+  maxLocalInput: 1500, // 本地小模型输入上限（字符）：避免长文触发重复/超时，仅在本地模型生效
   hoverDelay: 800,
   triggerMode: 'select', // select | hover | shift+hover
   lang: 'auto', // 统一展示/摘要语言：auto=跟随系统，或 zh-CN/en/ja/ko/fr/de/es/ru
@@ -283,6 +285,29 @@ function hashKey(str) {
   return (h >>> 0).toString(36);
 }
 
+// 去除模型陷入重复循环产生的“车轱辘话”：从文本末尾回溯，检测同一小片段是否循环 ≥3 次，
+// 若命中则只保留第一组重复单元、截断其后，保证气泡里不会出现一长串重复文本。
+function dedupeRepetition(text) {
+  if (!text || text.length < 40) return text;
+  const L = text.length;
+  for (let uLen = 4; uLen <= 60; uLen++) {
+    const u = text.slice(-uLen);
+    if (!u.trim()) continue;
+    let reps = 0;
+    let pos = L;
+    while (pos >= uLen && text.slice(pos - uLen, pos) === u) {
+      reps++;
+      pos -= uLen;
+    }
+    if (reps >= 3) {
+      const cut = pos + uLen; // 保留第一组重复单元，截断其后
+      if (cut >= L) return text;
+      return text.slice(0, cut).trim() + ' …';
+    }
+  }
+  return text;
+}
+
 // ── 列出本地 oMLX 可用模型（GET /v1/models）──────────────
 // 让弹窗能动态感知 oMLX 当前实际加载的模型，而不是写死一个名字。
 async function listLocalModels(endpoint) {
@@ -468,11 +493,13 @@ async function handleSummarize(req, sender) {
   if (!config.enabled) return { success: false, error: '扩展已关闭，请在设置中开启', code: 'DISABLED' };
 
   const provider = config.model;
+  const isLocal = provider === 'local';
   const mode = req.mode && self.HS_MODES.SUMMARY_MODES[req.mode] ? req.mode : 'summary';
-  const text = (req.text || '').slice(0, config.maxLength || 2000);
+  // 本地小模型（如 0.5B）输入过长易触发重复/超时：单独限制 maxLocalInput
+  const inputCap = isLocal ? Math.min(config.maxLength || 2000, config.maxLocalInput || 1500) : (config.maxLength || 2000);
+  const text = (req.text || '').slice(0, inputCap);
   if (!text || text.trim().length < 2) return { success: false, error: '没有可总结的文本内容', code: 'EMPTY_TEXT' };
 
-  const isLocal = provider === 'local';
   if (isLocal && !(config.local && config.local.model)) {
     return { success: false, error: '未选择本地模型：请打开扩展设置，在本地模型列表中选择并确认加载', code: 'NO_LOCAL_MODEL' };
   }
@@ -509,7 +536,7 @@ async function handleSummarize(req, sender) {
           const fb = pickFallbackProvider(config);
           if (fb) {
             console.warn('[hover-summary] Chrome 内置 AI 不可用，回退到', fb.label, '-', e.message);
-            result = await callChatAPI(fb.cfg, messages, { maxTokens, temperature, isLocal: fb.provider === 'local' });
+            result = await callChatAPI(fb.cfg, messages, { maxTokens, temperature, isLocal: fb.provider === 'local', maxOutput: config.maxOutput });
             result.fallbackNote = '（已自动回退到 ' + fb.label + '）';
           } else {
             throw e;
@@ -519,7 +546,7 @@ async function handleSummarize(req, sender) {
         }
       }
     } else {
-      result = await callChatAPI(config[provider], messages, { maxTokens, temperature, isLocal });
+      result = await callChatAPI(config[provider], messages, { maxTokens, temperature, isLocal, maxOutput: config.maxOutput });
     }
     if (cacheKey) {
       _cache.set(cacheKey, { summary: result.summary });
@@ -545,7 +572,7 @@ async function getBaiduToken(apiKey) {
 }
 
 // 统一的 chat 调用（兼容 OpenAI 兼容端点 与 百度文心非兼容端点）
-async function callChatAPI(cfg, messages, { maxTokens = 256, temperature = 0.3, isLocal = false }) {
+async function callChatAPI(cfg, messages, { maxTokens = 256, temperature = 0.3, isLocal = false, maxOutput = 0 }) {
   const start = performance.now();
   const isBaidu = /aip\.baidubce\.com/.test(cfg.endpoint || '');
   const localEp = isLocal || /(127\.0\.0\.1|localhost)/.test(cfg.endpoint || '');
@@ -567,7 +594,10 @@ async function callChatAPI(cfg, messages, { maxTokens = 256, temperature = 0.3, 
     // OpenAI 兼容：仅对“真正会思考”的模型放大 token 预算，避免正文被“思考”截断。
     // 注意：不再用 localEp 一刀切（本地也有非推理模型如 Qwen/Gemma），也不再用 4\.1 误判 Gemma-4。
     const isReasoningModel = /agnes|deepseek-r|reasoner|o1|o3|gpt-oss|nemotron|think|nanbeige/i.test(cfg.model || '') || /agnes-ai\.com/.test(cfg.endpoint || '');
-    const effMax = isReasoningModel ? Math.min(Math.max(Math.round(maxTokens * 4), 700), 3000) : maxTokens;
+    let effMax = isReasoningModel ? Math.min(Math.max(Math.round(maxTokens * 4), 700), 3000) : maxTokens;
+    // 输出上限：防小模型陷入重复循环（0.5B 设小如 256 即可）
+    const outCap = (maxOutput && maxOutput > 0) ? maxOutput : 800;
+    effMax = Math.min(effMax, outCap);
     if (cfg.apiKey) headers.Authorization = `Bearer ${cfg.apiKey}`;
     // 部分模型（如 Gemma 2）不支持 system role，把 system 内容合并到首条 user 消息
     let msgs = messages;
@@ -590,6 +620,13 @@ async function callChatAPI(cfg, messages, { maxTokens = 256, temperature = 0.3, 
       msgs = merged;
     }
     bodyObj = { model: cfg.model, messages: msgs, max_tokens: effMax, temperature, stream: false };
+    // 防小模型重复循环：本地(llama.cpp/oMLX/LM Studio)用 repeat_penalty，云端 OpenAI 兼容用 frequency_penalty
+    if (localEp) {
+      bodyObj.repeat_penalty = 1.15;
+      bodyObj.frequency_penalty = 0.5;
+    } else {
+      bodyObj.frequency_penalty = 0.6;
+    }
     // Gemma-4 系列需要显式关闭思考，否则会先输出大段思考过程，挤占总结正文
     if (localEp && /gemma-?4/i.test(cfg.model || '')) bodyObj.enable_thinking = false;
   }
@@ -639,6 +676,7 @@ async function callChatAPI(cfg, messages, { maxTokens = 256, temperature = 0.3, 
     // 只取正文 content；reasoning_content 是“思考过程”，绝不展示；兜底去掉 <think> 块
     summary = (msg.content || choice.text || '').trim();
     summary = summary.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+    summary = dedupeRepetition(summary);
   }
   if (!summary) {
     const raw = data ? JSON.stringify(data).slice(0, 200) : '(无法解析 JSON)';

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Hover Summary - AI 悬停摘要",
-  "version": "1.4.2",
+  "version": "1.4.3",
   "description": "在任意网页/文档划词，自动弹出 AI 摘要。支持摘要/要点/解释/翻译/追问五种模式，Agnes、NVIDIA NIM、本地 oMLX 多模型切换。悬停时自动检测换皮内容。",
   "permissions": ["storage", "activeTab", "scripting", "commands", "tabs"],
   "host_permissions": [

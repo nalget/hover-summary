@@ -133,6 +133,12 @@
     <label for="max-length" style="display:block;margin-top:10px;"><span data-i18n="maxLength">送入模型的最大字数</span>：<span id="maxlen-value">2000</span></label>
     <input type="range" id="max-length" min="500" max="4000" step="100" value="2000">
 
+    <label for="max-output" style="display:block;margin-top:10px;">单次摘要最大输出 Token（防小模型重复）：<span id="maxout-value">800</span></label>
+    <input type="range" id="max-output" min="128" max="1200" step="32" value="800">
+
+    <label for="max-local-input" style="display:block;margin-top:10px;">本地模型最大输入字数（仅本地生效）：<span id="maxlocal-value">1500</span></label>
+    <input type="range" id="max-local-input" min="500" max="3000" step="100" value="1500">
+
     <label for="hover-delay" style="display:block;margin-top:8px;"><span data-i18n="hoverDelay">悬停触发延迟</span>：<span id="delay-value">800</span>ms</label>
     <input type="range" id="hover-delay" min="300" max="2000" step="100" value="800">
 

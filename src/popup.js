@@ -5,6 +5,8 @@ const DEFAULT_CONFIG = {
   model: 'chrome', // 默认用 Chrome 内置 Gemini Nano（设备端·免Key·离线）；不可用时自动回退
   theme: 'auto',
   maxLength: 2000,
+  maxOutput: 800, // 单次摘要最大输出 token：防小模型重复，0.5B 可设 256
+  maxLocalInput: 1500, // 本地小模型输入上限（字符）
   hoverDelay: 800,
   triggerMode: 'select',
   lang: 'auto', // 统一展示/摘要语言：auto=跟随系统；或 zh-CN/en/ja/ko/fr/de/es/ru（即时生效）
@@ -33,6 +35,10 @@ const delaySlider = $('hover-delay');
 const delayValue = $('delay-value');
 const maxLenSlider = $('max-length');
 const maxLenValue = $('maxlen-value');
+const maxOutSlider = $('max-output');
+const maxOutValue = $('maxout-value');
+const maxLocalSlider = $('max-local-input');
+const maxLocalValue = $('maxlocal-value');
 const uiLang = $('ui-lang');
 const hideSlider = $('bubble-hide-delay');
 const hideValue = $('hide-value');
@@ -336,6 +342,8 @@ $('chrome-check').addEventListener('click', () => {
 modelSelect.addEventListener('change', () => switchModelPanel(modelSelect.value));
 delaySlider.addEventListener('input', () => (delayValue.textContent = delaySlider.value));
 maxLenSlider.addEventListener('input', () => (maxLenValue.textContent = maxLenSlider.value));
+maxOutSlider.addEventListener('input', () => (maxOutValue.textContent = maxOutSlider.value));
+maxLocalSlider.addEventListener('input', () => (maxLocalValue.textContent = maxLocalSlider.value));
 hideSlider.addEventListener('input', () => (hideValue.textContent = hideSlider.value));
 // 语言（顶部一排）：切换即时落盘 + 界面本地化即时生效
 uiLang.addEventListener('change', () => {
@@ -363,6 +371,10 @@ chrome.storage.sync.get('hoverSummaryConfig', (data) => {
   delayValue.textContent = delaySlider.value;
   maxLenSlider.value = cfg.maxLength || 2000;
   maxLenValue.textContent = maxLenSlider.value;
+  maxOutSlider.value = cfg.maxOutput || 800;
+  maxOutValue.textContent = maxOutSlider.value;
+  maxLocalSlider.value = cfg.maxLocalInput || 1500;
+  maxLocalValue.textContent = maxLocalSlider.value;
   // 语言：优先 lang，旧存储仅有 outputLang 时沿用（向后兼容）；加载即应用界面本地化
   const stored = data.hoverSummaryConfig || {};
   const savedLang = stored.lang || stored.outputLang || cfg.lang || DEFAULT_CONFIG.lang || 'auto';
@@ -447,6 +459,8 @@ function collectConfig() {
     model: modelSelect.value,
     theme: theme.value,
     maxLength: parseInt(maxLenSlider.value, 10),
+    maxOutput: parseInt(maxOutSlider.value, 10),
+    maxLocalInput: parseInt(maxLocalSlider.value, 10),
     hoverDelay: parseInt(delaySlider.value, 10),
     lang: uiLang.value,
     outputLang: resolveLang(uiLang.value), // 解析后的有效输出语言，随存储下发，供 content.js 直接取用
