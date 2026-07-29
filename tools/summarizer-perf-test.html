@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Summarizer Performance Preference 对比测试</title>
+<style>
+  :root { --bg:#0f1115; --card:#1a1d24; --line:#2a2f3a; --accent:#4f8cff; --ok:#34c759; --warn:#ffb020; --txt:#e6e8ec; --sub:#9aa3b2; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--txt); font:14px/1.6 -apple-system,Segoe UI,Roboto,"PingFang SC","Microsoft YaHei",sans-serif; padding:24px; }
+  h1 { font-size:18px; margin:0 0 4px; }
+  .sub { color:var(--sub); margin:0 0 18px; font-size:13px; }
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; margin-bottom:16px; }
+  label { display:block; color:var(--sub); font-size:12px; margin:10px 0 4px; }
+  textarea, select, input { width:100%; background:#11141a; color:var(--txt); border:1px solid var(--line); border-radius:8px; padding:9px; font-size:13px; font-family:inherit; }
+  textarea { min-height:200px; resize:vertical; }
+  .row { display:flex; gap:12px; flex-wrap:wrap; }
+  .row > div { flex:1; min-width:140px; }
+  button { cursor:pointer; border:none; border-radius:8px; padding:10px 16px; font-size:13px; font-weight:600; background:var(--accent); color:#fff; }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  button.ghost { background:#262b35; color:var(--txt); }
+  .status { font-size:13px; margin-top:10px; padding:10px; border-radius:8px; background:#11141a; border:1px solid var(--line); white-space:pre-wrap; }
+  .status.warn { border-color:var(--warn); }
+  .status.ok { border-color:var(--ok); }
+  .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  @media (max-width:820px){ .grid { grid-template-columns:1fr; } }
+  .col { background:var(--card); border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+  .col h3 { margin:0; padding:10px 12px; font-size:13px; background:#11141a; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; }
+  .badge { font-size:11px; padding:2px 8px; border-radius:20px; background:#262b35; color:var(--sub); }
+  .badge.speed { background:rgba(79,140,255,.18); color:#8fb4ff; }
+  .badge.cap { background:rgba(52,199,89,.18); color:#6fe09a; }
+  .col .body { padding:12px; min-height:120px; white-space:pre-wrap; font-size:13px; }
+  .col .meta { padding:8px 12px; border-top:1px solid var(--line); font-size:11px; color:var(--sub); }
+  code { background:#11141a; padding:1px 5px; border-radius:4px; font-size:12px; }
+</style>
+</head>
+<body>
+  <h1>Summarizer Performance Preference 对比测试</h1>
+  <p class="sub">本页直接调用 Chrome <code>window.Summarizer</code>，把 <code>preference: capability / speed / auto</code> 三种配置并排跑一遍，看质量与耗时的差距。需 Chrome 138+ 桌面端且已开启 <b>Summarizer API</b> 与 <b>Summarizer API with Performance Preference</b> 旗标。</p>
+
+  <div class="panel">
+    <label>待总结文本（可替换成任意长文）</label>
+    <textarea id="text">人工智能（AI）正以前所未有的速度重塑软件工程。过去，写一个爬虫或数据清洗脚本需要手动处理边界条件、异常重试与反爬策略；如今，开发者只需用自然语言描述意图，模型便能生成可运行的骨架代码，再经人工校验与微调即可上线。但这种便利也带来新风险：自动生成的代码可能隐藏供应链漏洞、泄露密钥，或在边缘场景下静默失败。因此，工程实践正在从"写代码"转向"审代码"——人类的核心价值越来越体现在对正确性、安全性与可维护性的判断上，而非逐行敲击键盘。与此同时，本地小模型（如 0.5B 级别的端侧模型）让隐私敏感场景无需上云即可完成摘要与改写，而云端大模型则承担更复杂的推理。如何在这条谱系上取舍，取决于延迟、成本、隐私与质量四者的权衡。</textarea>
+
+    <div class="row">
+      <div>
+        <label>类型 type</label>
+        <select id="type">
+          <option value="tldr">tldr（一句话）</option>
+          <option value="key-points">key-points（要点）</option>
+          <option value="teaser">teaser（引文）</option>
+          <option value="headline">headline（标题）</option>
+        </select>
+      </div>
+      <div>
+        <label>格式 format</label>
+        <select id="format">
+          <option value="markdown">markdown</option>
+          <option value="plain-text">plain-text</option>
+        </select>
+      </div>
+      <div>
+        <label>长度 length</label>
+        <select id="length">
+          <option value="short">short</option>
+          <option value="medium">medium</option>
+          <option value="long">long</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;">
+      <button id="run">▶ 运行对比（capability / speed / auto）</button>
+      <button id="dl" class="ghost" style="display:none;">⬇️ 下载设备端模型（约 1.5GB）</button>
+    </div>
+    <div id="status" class="status">点击「运行对比」开始。若提示模型需下载，点右侧按钮触发（本测试页允许，因为是本地手动测试）。</div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const PREF_LABEL = { capability:'质量优先', speed:'速度优先', auto:'自动' };
+const PREF_CLASS = { capability:'cap', speed:'speed', auto:'' };
+
+function setStatus(msg, cls){ const s=$('status'); s.textContent=msg; s.className='status'+(cls?(' '+cls):''); }
+
+async function checkAndMaybeDownload(){
+  if(!('Summarizer' in window)){ setStatus('❌ 当前环境无 Summarizer：请用 Chrome 138+ 桌面端，并到 chrome://flags 开启 Summarizer API 与 Performance Preference 旗标。', 'warn'); return false; }
+  const opts = { type:$('type').value, format:$('format').value, length:$('length').value };
+  let avail;
+  try { avail = await Summarizer.availability(opts); }
+  catch(e){ setStatus('❌ availability 报错：'+e.message, 'warn'); return false; }
+  if(avail==='available'||avail==='ready'){ setStatus('✅ Summarizer 可用（模型已就绪）。', 'ok'); return true; }
+  if(avail==='downloadable'||avail==='downloading'){
+    setStatus('⏳ 模型状态：'+avail+'。点「下载设备端模型」触发下载（浏览器级后台，完成后自动刷新）。', 'warn');
+    $('dl').style.display='inline-block';
+    return false;
+  }
+  setStatus('❌ Summarizer 不可用（'+avail+'）。当前设备/语言不支持或未开旗标。', 'warn');
+  return false;
+}
+
+$('dl').addEventListener('click', async () => {
+  $('dl').disabled = true;
+  setStatus('⏳ 正在触发设备端模型下载（约 1.5GB，浏览器后台进行）…', 'warn');
+  try {
+    const s = await Summarizer.create({ type:$('type').value, format:$('format').value, length:$('length').value,
+      monitor(m){ m.addEventListener('downloadprogress', (e)=>{ if(e.loaded&&e.total){ const p=(e.loaded/e.total*100).toFixed(0); setStatus('⏳ 下载中：'+p+'%', 'warn'); } }); } });
+    if(s.ready) await s.ready;
+    if(s.destroy) s.destroy();
+    setStatus('✅ 模型下载完成并已缓存。可再次点击「运行对比」。', 'ok');
+    $('dl').style.display='none';
+  } catch(e){ setStatus('❌ 下载失败：'+e.message, 'warn'); }
+  finally { $('dl').disabled=false; }
+});
+
+async function oneRun(pref){
+  const base = { type:$('type').value, format:$('format').value, length:$('length').value };
+  const opts = Object.assign({}, base, { preference: pref });
+  const t0 = performance.now();
+  let summarizer;
+  try { summarizer = await Summarizer.create(opts); }
+  catch(e){
+    // 某些构建不支持 preference，退回不带 preference 的创建
+    if(String(e.message).includes('preference') || String(e.message).toLowerCase().includes('not supported')){
+      summarizer = await Summarizer.create(base);
+    } else throw e;
+  }
+  if(summarizer.ready) await summarizer.ready;
+  const tReady = performance.now()-t0;
+  const out = await summarizer.summarize($('text').value, {});
+  const tDone = performance.now()-t0;
+  if(summarizer.destroy) summarizer.destroy();
+  return { out, tReady: tReady.toFixed(0), tDone: tDone.toFixed(0) };
+}
+
+function renderCard(pref, res){
+  const cls = PREF_CLASS[pref]||'';
+  const card = document.createElement('div');
+  card.className='col';
+  card.innerHTML = `<h3><span>preference: <b>${pref}</b> · ${PREF_LABEL[pref]}</span><span class="badge ${cls}">${res?res.tDone+'ms':'—'}</span></h3>
+    <div class="body">${res?escapeHtml(res.out):'⏳ 运行中…'}</div>
+    <div class="meta">${res?('创建/就绪 '+res.tReady+'ms · 总 '+res.tDone+'ms'):''}</div>`;
+  return card;
+}
+function escapeHtml(s){ return s.replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+$('run').addEventListener('click', async () => {
+  const ok = await checkAndMaybeDownload();
+  if(!ok) return;
+  const prefs = ['capability','speed','auto'];
+  const grid = $('grid'); grid.innerHTML='';
+  const cards = {};
+  prefs.forEach(p=>{ const c=renderCard(p,null); cards[p]=c; grid.appendChild(c); });
+  $('run').disabled = true;
+  try {
+    await Promise.all(prefs.map(async (p)=>{
+      try { const r = await oneRun(p); cards[p].replaceWith(renderCard(p,r)); }
+      catch(e){ const c=cards[p]; c.querySelector('.body').textContent='❌ '+e.message; c.querySelector('.meta').textContent=''; }
+    }));
+    setStatus('✅ 对比完成。看卡片：capability 通常更长更准但更慢；speed 更快但可能更简略；auto 由浏览器权衡。', 'ok');
+  } finally { $('run').disabled=false; }
+});
+
+// 初始探测一次可用性
+checkAndMaybeDownload();
+</script>
+</body>
+</html>
