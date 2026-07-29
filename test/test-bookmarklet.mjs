@@ -29,7 +29,7 @@ async function main() {
   
   // 模拟 prompt 返回 API key
   await page.evaluateOnNewDocument(() => {
-    window.prompt = () => '';
+    window.prompt = () => 'REPLACE_WITH_YOUR_AGNES_KEY';
     window.alert = (msg) => console.log('[alert]', msg);
   });
   

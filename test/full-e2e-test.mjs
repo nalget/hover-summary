@@ -9,7 +9,7 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CHROME_PATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 
-const AGNES_KEY = '';
+const AGNES_KEY = process.env.AGNES_KEY || '';
 const AGNES_ENDPOINT = 'https://apihub.agnes-ai.com/v1/chat/completions';
 const AGNES_MODEL = 'agnes-2.0-flash';
 

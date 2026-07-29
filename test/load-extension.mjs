@@ -82,7 +82,7 @@ async function main() {
           model: 'agnes',
           agnes: {
             endpoint: 'https://apihub.agnes-ai.com/v1/chat/completions',
-            apiKey: '',
+            apiKey: process.env.AGNES_KEY || '',
             model: 'agnes-2.0-flash'
           },
           hoverDelay: 500,

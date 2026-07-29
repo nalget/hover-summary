@@ -16,7 +16,7 @@ const stylesCss = fs.readFileSync(path.join(EXTENSION_PATH, 'src/styles.css'), '
 
 // API 配置
 const AGNES_ENDPOINT = 'https://apihub.agnes-ai.com/v1/chat/completions';
-const AGNES_KEY = '';
+const AGNES_KEY = process.env.AGNES_KEY || '';
 const AGNES_MODEL = 'agnes-2.0-flash';
 
 async function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
