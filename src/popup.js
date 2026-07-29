@@ -69,8 +69,8 @@ const POPUP_I18N = {
     'm.localModel': '本地模型（自动探测服务并列出）', refreshModels: '🔄 重新探测 / 刷新列表', 'm.endpoint': '服务地址（自动探测填充，无需手填）', 'm.endpointHint': '自动探测 oMLX(8000) / LM Studio(1234) / Ollama(11434) / llama.cpp(8080)；本地无需 Key。', loadModel: '✅ 确认并加载此模型', 'm.loadHint': '点此即把设置写入并只把选中的模型载入 oMLX 内存（oMLX 会自动淘汰其它模型，不占多余内存）。之后总结都只用它。',
     'm.publicPreset': '服务商', 'm.publicEndpoint': '端点（OpenAI 兼容，可改）', 'm.publicModel': '模型名', 'm.publicKey': 'API Key',
     testConn: '测试连接', speedTest: '⚡ 测速并选用最快模型',
-    chromeHint: '调用 Chrome 浏览器内置的 Gemini Nano（设备端运行）：无需 Key、无需服务器、离线、隐私不出本机。摘要/要点走专用 Summarizer，解释/翻译/追问走 Prompt API。',
-    chromeCheck: '🔍 检查/下载 Chrome 内置模型', chromeUnavail: '若显示「不可用」：Chrome 内置 AI 是“内置 AI API”，无法在扩展后台（Service Worker）运行，本扩展已通过主世界桥接调用；需 Chrome 138+ 桌面端，并到 chrome://flags 开启相关优化项（多为 Dev/Canary），首次下载约 1.7GB 模型。中文质量偏弱，建议作为备选（不可用时自动回退）。',
+    chromeHint: '调用 Chrome 浏览器内置的 Gemini Nano（设备端运行）：无需 Key、无需服务器、离线、隐私不出本机。仅当浏览器已自带该模型时可用；本扩展不引导下载约 1.5GB 设备端模型，未自带请改用其它模型来源。摘要/要点走专用 Summarizer，解释/翻译/追问走 Prompt API。',
+    chromeCheck: '🔍 检查 Chrome 内置模型', chromeUnavail: '若显示「不可用 / 需下载」：本扩展不引导下载 1.5GB 设备端模型——该模型需 Chrome 浏览器自带（Chrome 138+ 桌面端，且已开启相关优化项）。未自带时此路不可用，建议改用其它模型（本地 oMLX / 云端 API / 公开大模型）。',
     save: '保存设置', saved: '✅ 已保存', 'lang.auto': '跟随系统'
   },
   'en': {
@@ -84,8 +84,8 @@ const POPUP_I18N = {
     'm.localModel': 'Local model (auto-detected & listed)', refreshModels: '🔄 Re-detect / refresh list', 'm.endpoint': 'Service address (auto-filled, no need to type)', 'm.endpointHint': 'Auto-detect oMLX(8000) / LM Studio(1234) / Ollama(11434) / llama.cpp(8080); no Key needed locally.', loadModel: '✅ Confirm & load this model', 'm.loadHint': 'Saves settings and loads only the selected model into oMLX memory (oMLX evicts others automatically). Summaries then use only this model.',
     'm.publicPreset': 'Provider', 'm.publicEndpoint': 'Endpoint (OpenAI-compatible, editable)', 'm.publicModel': 'Model name', 'm.publicKey': 'API Key',
     testConn: 'Test connection', speedTest: '⚡ Speed test & pick fastest model',
-    chromeHint: 'Uses Chrome’s on-device Gemini Nano: no Key, no server, offline, private. Summary/Key-points use the Summarizer API; Explain/Translate/Ask use the Prompt API.',
-    chromeCheck: '🔍 Check / download Chrome built-in model', chromeUnavail: 'If "unavailable": Chrome built-in AI is an "on-device AI API" that cannot run in the extension Service Worker; this extension calls it via a main-world bridge. Requires Chrome 138+ desktop, and chrome://flags enabling optimization-guide-on-device-model & prompt-api-for-gemini-nano (mostly Dev/Canary); first download ~1.7GB. Chinese quality is weaker — keep as fallback (auto-falls back when unavailable).',
+    chromeHint: 'Uses Chrome’s on-device Gemini Nano: no Key, no server, offline, private. Only usable if your Chrome already ships the model — this extension does NOT trigger the ~1.5GB download; if it’s not built-in, pick another model source. Summary/Key-points use the Summarizer API; Explain/Translate/Ask use the Prompt API.',
+    chromeCheck: '🔍 Check Chrome built-in model', chromeUnavail: 'If it shows "unavailable / needs download": this extension does NOT trigger the ~1.5GB on-device download — that model must ship with your Chrome (Chrome 138+ desktop with the relevant flags). When not built-in, this path is unusable; pick another model (local oMLX / cloud API / public LLM) instead.',
     save: 'Save settings', saved: '✅ Saved', 'lang.auto': 'Follow system'
   },
   'ja': {
@@ -100,7 +100,7 @@ const POPUP_I18N = {
     'm.publicPreset': 'プロバイダ', 'm.publicEndpoint': 'エンドポイント（OpenAI互換・編集可）', 'm.publicModel': 'モデル名', 'm.publicKey': 'APIキー',
     testConn: '接続テスト', speedTest: '⚡ 速度測定・最速モデル選択',
     chromeHint: 'Chrome内蔵Gemini Nanoを使用（デバイス側・キー不要・オフライン・プライベート）。要約/要点はSummarizer API、説明/翻訳/質問はPrompt API。',
-    chromeCheck: '🔍 Chrome内蔵モデルを確認／ダウンロード', chromeUnavail: '「利用不可」の場合：Chrome内蔵AIは「オンデバイスAI API」で、拡張機能のService Workerでは動作しません。本拡張はメイン-worldブリッジ経由で呼び出します。Chrome 138+ デスクトップ、chrome://flagsで関連項目を有効化（多くはDev/Canary）、初回DL約1.7GB。中文品質は弱めでフォールバック推奨。',
+    chromeCheck: '🔍 Chrome内蔵モデルを確認', chromeUnavail: '"利用不可／ダウンロード必要"の場合：本拡張は約1.5GBのオンデバイスモデルのダウンロードを促しません。そのモデルはChrome自体に組み込まれている必要があります（Chrome 138+ デスクトップ、関連フラグ有効）。組み込みがない場合はこの経路は利用不可です。他のモデル（ローカルoMLX／クラウドAPI／公開LLM）を選択してください。',
     save: '設定を保存', saved: '✅ 保存しました', 'lang.auto': 'システムに従う'
   },
   'ko': {
@@ -115,7 +115,7 @@ const POPUP_I18N = {
     'm.publicPreset': '공급자', 'm.publicEndpoint': '엔드포인트(OpenAI 호환·수정 가능)', 'm.publicModel': '모델명', 'm.publicKey': 'API 키',
     testConn: '연결 테스트', speedTest: '⚡ 속도 측정·최快 모델 선택',
     chromeHint: 'Chrome 내장 Gemini Nano 사용(기기 측·키 불필요·오프라인·프라이빗). 요약/요점은 Summarizer API, 설명/번역/질문은 Prompt API.',
-    chromeCheck: '🔍 Chrome 내장 모델 확인/다운로드', chromeUnavail: '"사용 불가"인 경우: Chrome 내장 AI는 "온디바이스 AI API"로 확장 프로그램 Service Worker에서 동작하지 않습니다. 본 확장은 메인 월드 브리지로 호출합니다. Chrome 138+ 데스크톱, chrome://flags에서 관련 항목 활성화(대개 Dev/Canary), 첫 다운로드 약 1.7GB. 중국어 품질은 약해 폴백 권장.',
+    chromeCheck: '🔍 Chrome 내장 모델 확인', chromeUnavail: '"사용 불가 / 다운로드 필요"인 경우: 이 확장은 약 1.5GB 온디바이스 모델 다운로드를 유도하지 않습니다. 해당 모델은 Chrome 자체에 내장되어 있어야 합니다(Chrome 138+ 데스크톱, 관련 플래그 활성화). 내장되지 않은 경우 이 경로는 사용 불가이며, 다른 모델(로컬 oMLX / 클라우드 API / 공개 LLM)을 선택하세요.',
     save: '설정 저장', saved: '✅ 저장됨', 'lang.auto': '시스템 따르기'
   },
   'fr': {
@@ -130,7 +130,7 @@ const POPUP_I18N = {
     'm.publicPreset': 'Fournisseur', 'm.publicEndpoint': 'Endpoint (compatible OpenAI, modifiable)', 'm.publicModel': 'Nom du modèle', 'm.publicKey': 'Clé API',
     testConn: 'Tester la connexion', speedTest: '⚡ Test de vitesse & modèle le plus rapide',
     chromeHint: 'Utilise le Gemini Nano intégré à Chrome : sans clé, sans serveur, hors ligne, privé. Résumé/Points via l’API Summarizer ; Expliquer/Traduire/Question via l’API Prompt.',
-    chromeCheck: '🔍 Vérifier / télécharger le modèle Chrome intégré', chromeUnavail: 'Si « indisponible » : l’IA intégrée Chrome est une « API on-device » qui ne fonctionne pas dans le Service Worker de l’extension ; cette extension l’appelle via un pont main-world. Nécessite Chrome 138+ bureau, et chrome://flags activant optimization-guide-on-device-model & prompt-api-for-gemini-nano (souvent Dev/Canary) ; premier téléchargement ~1,7Go. Qualité chinoise plus faible — garder en repli.',
+    chromeCheck: '🔍 Vérifier le modèle Chrome intégré', chromeUnavail: 'Si « indisponible / téléchargement requis » : cette extension ne déclenche PAS le téléchargement (~1,5Go) du modèle on-device — celui-ci doit être intégré à Chrome (Chrome 138+ bureau, flags requis). S’il n’est pas intégré, ce chemin est inutilisable ; choisissez un autre modèle (oMLX local / API cloud / LLM public).',
     save: 'Enregistrer', saved: '✅ Enregistré', 'lang.auto': 'Suivre le système'
   },
   'de': {
@@ -145,7 +145,7 @@ const POPUP_I18N = {
     'm.publicPreset': 'Anbieter', 'm.publicEndpoint': 'Endpoint (OpenAI-kompatibel, änderbar)', 'm.publicModel': 'Modellname', 'm.publicKey': 'API-Schlüssel',
     testConn: 'Verbindung testen', speedTest: '⚡ Geschwindigkeitstest & schnellstes Modell',
     chromeHint: 'Nutzt Chromes Geräte-KI Gemini Nano: kein Key, kein Server, offline, privat. Zusammenfassung/Punkte via Summarizer API; Erklären/Übersetzen/Fragen via Prompt API.',
-    chromeCheck: '🔍 Chrome-Built-in-Modell prüfen / laden', chromeUnavail: 'Bei „nicht verfügbar“: Chromes Built-in AI ist eine „On-Device AI API“, die nicht im Service Worker der Erweiterung läuft; diese Erweiterung ruft sie über eine Main-World-Brücke auf. Benötigt Chrome 138+ Desktop und chrome://flags mit aktiviertem optimization-guide-on-device-model & prompt-api-for-gemini-nano (meist Dev/Canary); erster Download ~1,7GB. Chinesische Qualität schwächer — als Fallback behalten.',
+    chromeCheck: '🔍 Chrome-Built-in-Modell prüfen', chromeUnavail: 'Bei „nicht verfügbar / Download nötig“: diese Erweiterung löst den ~1,5GB on-device Download NICHT aus — das Modell muss in Chrome integriert sein (Chrome 138+ Desktop, entsprechende Flags). Ist es nicht integriert, ist dieser Pfad unbrauchbar; wählen Sie ein anderes Modell (lokales oMLX / Cloud-API / öffentlicher LLM).',
     save: 'Speichern', saved: '✅ Gespeichert', 'lang.auto': 'System folgen'
   },
   'es': {
@@ -160,7 +160,7 @@ const POPUP_I18N = {
     'm.publicPreset': 'Proveedor', 'm.publicEndpoint': 'Endpoint (compatible OpenAI, editable)', 'm.publicModel': 'Nombre del modelo', 'm.publicKey': 'Clave API',
     testConn: 'Probar conexión', speedTest: '⚡ Prueba de velocidad y modelo más rápido',
     chromeHint: 'Usa el Gemini Nano integrado en Chrome: sin clave, sin servidor, offline, privado. Resumen/Puntos vía API Summarizer; Explicar/Traducir/Preguntar vía API Prompt.',
-    chromeCheck: '🔍 Comprobar / descargar modelo integrado de Chrome', chromeUnavail: 'Si «no disponible»: la IA integrada de Chrome es una «API on-device» que no funciona en el Service Worker de la extensión; esta extensión la llama vía un puente main-world. Requiere Chrome 138+ escritorio y chrome://flags activando optimization-guide-on-device-model & prompt-api-for-gemini-nano (suele ser Dev/Canary); primera descarga ~1,7GB. Calidad china más débil — mantener como respaldo.',
+    chromeCheck: '🔍 Comprobar modelo integrado de Chrome', chromeUnavail: 'Si muestra «no disponible / requiere descarga»: esta extensión NO dispara la descarga (~1,5GB) del modelo on-device — ese modelo debe venir integrado en Chrome (Chrome 138+ escritorio, flags activados). Si no está integrado, esta vía es inutilizable; elija otro modelo (oMLX local / API en la nube / LLM público).',
     save: 'Guardar', saved: '✅ Guardado', 'lang.auto': 'Seguir sistema'
   },
   'ru': {
@@ -175,7 +175,7 @@ const POPUP_I18N = {
     'm.publicPreset': 'Провайдер', 'm.publicEndpoint': 'Endpoint (OpenAI-совместимый, изменяемый)', 'm.publicModel': 'Имя модели', 'm.publicKey': 'API-ключ',
     testConn: 'Проверить соединение', speedTest: '⚡ Тест скорости и самая быстрая модель',
     chromeHint: 'Использует встроенный Gemini Nano в Chrome: без ключа, без сервера, офлайн, приватно. Резюме/Пункты через API Summarizer; Объяснить/Перевести/Спросить через API Prompt.',
-    chromeCheck: '🔍 Проверить / загрузить встроенную модель Chrome', chromeUnavail: 'Если «недоступно»: встроенный ИИ Chrome — это «on-device AI API», которая не работает в Service Worker расширения; это расширение вызывает её через main-world мост. Требует Chrome 138+ настольный и chrome://flags с включёнными optimization-guide-on-device-model & prompt-api-for-gemini-nano (обычно Dev/Canary); первое скачивание ~1,7GB. Китайское качество слабее — держите как запасной.',
+    chromeCheck: '🔍 Проверить встроенную модель Chrome', chromeUnavail: 'Если «недоступно / нужна загрузка»: это расширение НЕ запускает загрузку (~1,5GB) on-device модели — модель должна быть встроена в Chrome (Chrome 138+ настольный, нужные флаги). Если не встроена, этот путь неработоспособен; выберите другую модель (локальный oMLX / облачный API / публичный LLM).',
     save: 'Сохранить', saved: '✅ Сохранено', 'lang.auto': 'Как в системе'
   }
 };
@@ -295,26 +295,20 @@ async function queryActiveTabChromeAI(action) {
   }
 
   // 都无法访问：明确根因
-  const e = new Error('此环境无法访问 Chrome 内置 AI：需在普通网页上打开本扩展（chrome:// 页面无法调用）。要求 Chrome 138+ 桌面端；Summarizer 默认可用（首次约下载 1.5GB 设备端模型），Prompt API(LanguageModel) 通常需到 chrome://flags 开启 prompt-api-for-gemini-nano。');
+  const e = new Error('此环境无法访问 Chrome 内置 AI：需在普通网页上打开本扩展（chrome:// 页面无法调用）。要求 Chrome 138+ 桌面端；Summarizer 是否可用取决于浏览器是否已自带设备端模型（本扩展不引导下载）。');
   e.code = 'NO_CHROME_AI';
   throw e;
 }
 
-// 任一模型就绪即视为“可用”（不要求两者同时就绪）
-function isChromeAIUsable(a) {
-  const ok = (v) => v === 'ready' || v === 'available';
-  return ok(a.summarizer) || ok(a.languageModel);
-}
-
-function renderChromeAIStatus(box, a, isDownload) {
+function renderChromeAIStatus(box, a) {
   const ok = (v) => v === 'ready' || v === 'available';
   const s = a.summarizer, l = a.languageModel;
   const sReady = ok(s), lReady = ok(l);
   const usable = sReady || lReady;
   box.className = 'test-status ' + (usable ? 'ok' : '');
-  box.style.background = usable ? '#e6f4ea' : '#fef7e0';
-  box.style.color = usable ? '#1e7e34' : '#8a6d00';
-  const fmt = (v) => ok(v) ? '✅ 就绪' : (v === 'downloadable' ? '⬇️ 可下载' : (v === 'downloading' ? '⬇️ 下载中' : (v === 'unavailable' ? '❌ 不可用' : (v === 'n/a' ? '—' : v))));
+  box.style.background = usable ? '#e6f4ea' : '#fdecea';
+  box.style.color = usable ? '#1e7e34' : '#c62828';
+  const fmt = (v) => ok(v) ? '✅ 就绪' : (v === 'downloadable' ? '⬇️ 需下载(本扩展不引导)' : (v === 'downloading' ? '⬇️ 浏览器下载中' : (v === 'unavailable' ? '❌ 不可用' : (v === 'n/a' ? '—' : v))));
   if (usable) {
     let note = '（摘要/要点可设备端运行）';
     if (sReady && lReady) note = '（摘要/解释/翻译/追问均可设备端运行）';
@@ -323,22 +317,19 @@ function renderChromeAIStatus(box, a, isDownload) {
     box.textContent = `Summarizer: ${fmt(s)} ｜ LanguageModel: ${fmt(l)} ${note}`;
     return;
   }
-  if (isDownload && (s === 'downloadable' || s === 'downloading' || l === 'downloadable' || l === 'downloading')) {
-    box.textContent = '⏳ 正在下载设备端模型（约 1.5GB），请稍候；完成后会自动变为「就绪」。过程中请勿关闭该网页标签页。';
-    return;
-  }
-  box.textContent = `Summarizer: ${fmt(s)} ｜ LanguageModel: ${fmt(l)}（点击上方按钮触发下载）`;
+  // 不可用：明确不引导下载，提示切换模型来源
+  box.textContent = `Summarizer: ${fmt(s)} ｜ LanguageModel: ${fmt(l)} —— 此路不可用（需 Chrome 浏览器自带设备端模型；本扩展不引导下载，请在上方切换其它模型来源）`;
 }
 
 let chromeAiPollTimer = null;
 function stopChromeAIPoll() { if (chromeAiPollTimer) { clearInterval(chromeAiPollTimer); chromeAiPollTimer = null; } }
 
-// 查询并刷新状态（轮询时复用）
+// 仅查询可用性（不下载、不轮询等待下载）
 async function refreshChromeAIStatus() {
   const box = $('check-chrome');
   try {
     const a = await queryActiveTabChromeAI('chromeAiAvailability');
-    renderChromeAIStatus(box, a, false);
+    renderChromeAIStatus(box, a);
     return a;
   } catch (e) {
     box.className = 'test-status err';
@@ -347,15 +338,7 @@ async function refreshChromeAIStatus() {
   }
 }
 
-function startChromeAIPoll() {
-  stopChromeAIPoll();
-  chromeAiPollTimer = setInterval(async () => {
-    const a = await refreshChromeAIStatus();
-    if (a && isChromeAIUsable(a)) stopChromeAIPoll(); // 任一模型就绪即停止轮询
-  }, 2500);
-}
-
-// 检查 Chrome 内置 AI 可用性（切到面板时自动调用）
+// 检查 Chrome 内置 AI 可用性（切到面板时自动调用；点击按钮仅重新查询）
 function checkChromeAIStatus() {
   const box = $('check-chrome');
   box.style.display = 'block';
@@ -364,21 +347,9 @@ function checkChromeAIStatus() {
   refreshChromeAIStatus();
 }
 
-// 「检查/下载 Chrome 内置模型」按钮：触发下载（首次约 1.5GB），随后轮询真实状态
+// 「检查 Chrome 内置模型」按钮：仅查询可用性，绝不触发 1.5GB 下载
 $('chrome-check').addEventListener('click', () => {
-  const box = $('check-chrome');
-  box.style.display = 'block';
-  box.className = 'test-status'; box.style.background = '#eef'; box.style.color = '#555';
-  box.textContent = '⏳ 正在触发设备端模型下载（约 1.5GB，请勿关闭该网页标签页）…';
-  queryActiveTabChromeAI('chromeAiDownload')
-    .then((a) => {
-      renderChromeAIStatus(box, a, true);
-      startChromeAIPoll(); // 触发后开始轮询，实时显示 下载中 → 就绪
-    })
-    .catch((e) => {
-      box.className = 'test-status err';
-      box.textContent = '❌ ' + e.message;
-    });
+  checkChromeAIStatus();
 });
 
 modelSelect.addEventListener('change', () => switchModelPanel(modelSelect.value));

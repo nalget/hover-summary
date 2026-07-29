@@ -243,7 +243,7 @@
 
     <div class="model-config" id="cfg-chrome">
       <div class="hint" style="margin-top:0;" data-i18n="chromeHint">调用 Chrome 浏览器内置的 Gemini Nano（设备端运行）：<b>无需 Key、无需服务器、离线、隐私不出本机</b>。摘要/要点走专用 Summarizer，解释/翻译/追问走 Prompt API。</div>
-      <button type="button" id="chrome-check" style="width:100%;margin-top:8px;padding:7px;border:1px solid #1a73e8;background:#1a73e8;color:#fff;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;" data-i18n="chromeCheck">🔍 检查/下载 Chrome 内置模型</button>
+      <button type="button" id="chrome-check" style="width:100%;margin-top:8px;padding:7px;border:1px solid #1a73e8;background:#1a73e8;color:#fff;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;" data-i18n="chromeCheck">🔍 检查 Chrome 内置模型</button>
       <div class="test-status" id="check-chrome"></div>
       <div class="hint" style="margin-top:6px;" data-i18n="chromeUnavail">若显示「不可用」：Chrome 内置 AI 是“内置 AI API”，<b>无法在扩展后台（Service Worker）运行</b>，本扩展已通过主世界桥接调用；需 Chrome 138+ 桌面端，并到 chrome://flags 开启 optimization-guide-on-device-model 与 prompt-api-for-gemini-nano（多为 Dev/Canary），首次下载约 1.7GB 模型。中文质量偏弱，建议作为备选（不可用时自动回退）。</div>
     </div>

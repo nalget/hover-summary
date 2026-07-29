@@ -398,7 +398,7 @@ async function loadLocalModel(endpoint, model) {
 // self.LanguageModel / self.Summarizer 恒为 undefined。
 // 解决方案：把实际调用代理到“主世界桥接脚本”(chrome-ai-bridge.js)，
 // 由它访问 window.LanguageModel / window.Summarizer 并返回结果。
-// 弹窗“检查/下载”也直接走弹窗窗口（window 上下文）检测/下载。
+// 弹窗“检查”仅走主世界桥接查询可用性（不下载）。
 async function callChromeAI(mode, payload, tabId) {
   if (!tabId) {
     const e = new Error('Chrome 内置 AI 需在页面主世界调用（缺少来源标签页）');
@@ -443,8 +443,8 @@ function pickFallbackProvider(config) {
   return null;
 }
 
-// 探测内置 AI 可用性，并在首次使用时预下载模型（弹窗“检查/下载”按钮调用）。
-// 返回各子 API 的 availability 状态；downloadable/downloading 会触发下载并等待 ready。
+// 探测内置 AI 可用性（仅查询，不下载）。
+// 返回各子 API 的 availability 状态；downloadable/downloading 表示需浏览器自带模型，本扩展不引导下载。
 async function checkChromeAI() {
   const LM = self.LanguageModel;
   const Sum = self.Summarizer;
@@ -458,28 +458,14 @@ async function checkChromeAI() {
   const out = { ok: true, available: true, summarizer: 'n/a', languageModel: 'n/a' };
   if (Sum) {
     try {
-      const a = await Sum.availability({ type: 'tldr', format: 'markdown', length: 'short' }).catch(() => 'unavailable');
-      out.summarizer = a;
-      if (a === 'downloadable' || a === 'downloading') {
-        const s = await Sum.create({ type: 'tldr', format: 'markdown', length: 'short' });
-        if (s.ready) await s.ready;
-        if (s.destroy) s.destroy();
-        out.summarizer = 'ready';
-      }
+      out.summarizer = await Sum.availability({ type: 'tldr', format: 'markdown', length: 'short' }).catch(() => 'unavailable');
     } catch (e) {
       out.summarizer = 'error: ' + e.message;
     }
   }
   if (LM) {
     try {
-      const a = await LM.availability().catch(() => 'unavailable');
-      out.languageModel = a;
-      if (a === 'downloadable' || a === 'downloading') {
-        const s = await LM.create();
-        if (s.ready) await s.ready;
-        if (s.destroy) s.destroy();
-        out.languageModel = 'ready';
-      }
+      out.languageModel = await LM.availability().catch(() => 'unavailable');
     } catch (e) {
       out.languageModel = 'error: ' + e.message;
     }

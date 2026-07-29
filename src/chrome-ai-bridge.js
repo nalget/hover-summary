@@ -24,8 +24,9 @@
       } catch (e) {
         availability = 'unavailable';
       }
-      if (availability === 'unavailable') {
-        const e = new Error('Summarizer 不可用（设备/语言不支持或未开启 flag）');
+      // 仅当浏览器已自带模型（ready/available）时才使用；本扩展绝不引导下载 1.5GB 模型
+      if (availability !== 'ready' && availability !== 'available') {
+        const e = new Error('Summarizer 不可用（浏览器未自带该模型；本扩展不引导下载，请在设置切换其它模型来源）');
         e.code = 'NO_CHROME_AI';
         throw e;
       }
@@ -35,11 +36,8 @@
           ...opts,
           monitor(m) { m.addEventListener('downloadprogress', () => {}); }
         });
-        if ((availability === 'downloadable' || availability === 'downloading') && summarizer.ready) {
-          await summarizer.ready;
-        }
       } catch (e) {
-        const err = new Error('创建/下载 Summarizer 失败：' + e.message);
+        const err = new Error('创建 Summarizer 失败：' + e.message);
         err.code = 'NO_CHROME_AI';
         throw err;
       }
@@ -63,8 +61,9 @@
     } catch (e) {
       availability = 'unavailable';
     }
-    if (availability === 'unavailable') {
-      const e = new Error('LanguageModel 不可用（模型未下载或不支持此设备）');
+    // 仅当浏览器已自带模型（ready/available）时才使用；本扩展绝不引导下载
+    if (availability !== 'ready' && availability !== 'available') {
+      const e = new Error('LanguageModel 不可用（浏览器未自带该模型；本扩展不引导下载，请在设置切换其它模型来源）');
       e.code = 'NO_CHROME_AI';
       throw e;
     }
@@ -74,11 +73,8 @@
         systemPrompt: (messages && messages[0] && messages[0].content) || '你是一个简洁的阅读助手。',
         monitor(m) { m.addEventListener('downloadprogress', () => {}); }
       });
-      if ((availability === 'downloadable' || availability === 'downloading') && session.ready) {
-        await session.ready;
-      }
     } catch (e) {
-      const err = new Error('创建/下载 LanguageModel 失败：' + e.message);
+      const err = new Error('创建 LanguageModel 失败：' + e.message);
       err.code = 'NO_CHROME_AI';
       throw err;
     }
@@ -109,42 +105,6 @@
     return out;
   }
 
-  // 触发下载（downloadable/downloading 时 create 即启动设备端模型下载，浏览器级、后台继续；
-  // 此处不阻塞等待下载完成——弹窗通过轮询 availability() 实时观察 下载中→就绪）
-  async function downloadChromeAI() {
-    const Sum = window.Summarizer, LM = window.LanguageModel;
-    const out = { summarizer: 'n/a', languageModel: 'n/a' };
-    const trigger = (factory, opts) => {
-      // 启动下载：创建会话后，模型下载在后台进行；下载完成(.ready)后销毁会话即可（模型已缓存浏览器级）
-      factory(opts).then((s) => {
-        if (s && s.ready) s.ready.catch(() => {}).finally(() => { try { s.destroy && s.destroy(); } catch (e) {} });
-        else if (s && s.destroy) { try { s.destroy(); } catch (e) {} }
-      }).catch(() => {});
-    };
-    if (Sum) {
-      try {
-        const a = await Sum.availability({ type: 'tldr', format: 'markdown', length: 'short' }).catch(() => 'unavailable');
-        out.summarizer = a;
-        if (a === 'downloadable' || a === 'downloading') {
-          trigger((o) => Sum.create(Object.assign({ monitor(m) { m.addEventListener('downloadprogress', () => {}); } }, o)),
-            { type: 'tldr', format: 'markdown', length: 'short' });
-          out.summarizer = (a === 'downloading') ? 'downloading' : 'downloadable';
-        }
-      } catch (e) { out.summarizer = 'error: ' + e.message; }
-    }
-    if (LM) {
-      try {
-        const a = await LM.availability().catch(() => 'unavailable');
-        out.languageModel = a;
-        if (a === 'downloadable' || a === 'downloading') {
-          trigger((o) => LM.create(Object.assign({ monitor(m) { m.addEventListener('downloadprogress', () => {}); } }, o)), {});
-          out.languageModel = (a === 'downloading') ? 'downloading' : 'downloadable';
-        }
-      } catch (e) { out.languageModel = 'error: ' + e.message; }
-    }
-    return out;
-  }
-
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (msg && msg.action === 'chromeAiCall') {
       callChromeAI(msg.payload)
@@ -158,11 +118,7 @@
         .catch((e) => sendResponse({ error: e.message, code: e.code || 'NO_CHROME_AI' }));
       return true;
     }
-    if (msg && msg.action === 'chromeAiDownload') {
-      downloadChromeAI()
-        .then((r) => sendResponse(r))
-        .catch((e) => sendResponse({ error: e.message, code: e.code || 'NO_CHROME_AI' }));
-      return true;
-    }
+    // 注意：本扩展已移除“下载”入口——Chrome 内置模型需浏览器自带（ready）才可用，
+    // 不引导用户下载约 1.5GB 设备端模型。‘chromeAiDownload’ 动作不再处理。
   });
 })();
