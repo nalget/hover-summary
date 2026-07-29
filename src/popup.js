@@ -192,6 +192,7 @@ const configPanels = { agnes: $('cfg-agnes'), nvidia: $('cfg-nvidia'), local: $(
 function switchModelPanel(model) {
   Object.values(configPanels).forEach((p) => p.classList.remove('active'));
   if (configPanels[model]) configPanels[model].classList.add('active');
+  stopChromeAIPoll(); // 离开 Chrome 面板时停止状态轮询
   // 懒加载：切到“本地模型”面板时才探测服务并拉取模型列表（其余时候不打扰本地服务）
   if (model === 'local') detectAndRefreshLocal();
   // 切到“Chrome 内置 AI”面板时检查可用性（并可在面板内手动触发下载）
@@ -269,17 +270,22 @@ function sendTab(tabId, action) {
 }
 
 async function queryActiveTabChromeAI(action) {
-  // 1) 优先：当前活动标签页的主世界桥接（普通网页上才有，最贴近实际调用）
-  try {
-    const tabs = await new Promise((res) => chrome.tabs.query({ active: true, currentWindow: true }, res));
-    const tab = tabs && tabs[0];
-    if (tab && tab.id) {
+  // 选一个“主世界桥接已注入”的标签页：优先当前活动页，其次任意 http(s) 网页。
+  // （chrome:// 页面与扩展页不会注入桥接脚本，故需跳过。）
+  let tabs = [];
+  try { tabs = await new Promise((res) => chrome.tabs.query({}, res)); } catch (e) { tabs = []; }
+  const isWeb = (t) => /^https?:/.test((t && t.url) || '');
+  const active = tabs.find((t) => t.active && isWeb(t));
+  const web = tabs.find(isWeb);
+  const candidates = [active, web].filter(Boolean);
+  for (const tab of candidates) {
+    try {
       const r = await sendTab(tab.id, action);
       if (r && !r.__noBridge) return r;
-    }
-  } catch (e) { /* 无桥接：走 window 兜底 */ }
+    } catch (e) { /* 该标签页无桥接：尝试下一个 */ }
+  }
 
-  // 2) 兜底：弹窗自身 window（部分 Chrome 在扩展页也暴露内置 AI）
+  // 兜底：弹窗自身 window（部分 Chrome 在扩展页也暴露内置 AI）
   const Sum = window.Summarizer, LM = window.LanguageModel;
   if (Sum || LM) {
     const out = { summarizer: 'n/a', languageModel: 'n/a' };
@@ -288,51 +294,87 @@ async function queryActiveTabChromeAI(action) {
     return out;
   }
 
-  // 3) 都无法访问：明确根因
-  const e = new Error('此环境无法访问 Chrome 内置 AI：需 Chrome 138+ 桌面端，并在 chrome://flags 开启 optimization-guide-on-device-model 与 prompt-api-for-gemini-nano（多为 Dev/Canary）。本扩展已通过主世界桥接在普通网页上调用它。');
+  // 都无法访问：明确根因
+  const e = new Error('此环境无法访问 Chrome 内置 AI：需在普通网页上打开本扩展（chrome:// 页面无法调用）。要求 Chrome 138+ 桌面端；Summarizer 默认可用（首次约下载 1.5GB 设备端模型），Prompt API(LanguageModel) 通常需到 chrome://flags 开启 prompt-api-for-gemini-nano。');
   e.code = 'NO_CHROME_AI';
   throw e;
 }
 
-function renderChromeAIStatus(box, a, isDownload) {
-  const s = a.summarizer, l = a.languageModel;
-  const ready = (s === 'ready' || s === 'available') && (l === 'ready' || l === 'available');
-  box.className = 'test-status ' + (ready ? 'ok' : '');
-  box.style.background = ready ? '#e6f4ea' : '#fef7e0';
-  box.style.color = ready ? '#1e7e34' : '#8a6d00';
-  const fmt = (v) => (v === 'ready' || v === 'available') ? '✅ 就绪' : (v === 'downloadable' ? '⬇️ 可下载' : (v === 'downloading' ? '⬇️ 下载中' : (v === 'n/a' ? '—' : v)));
-  if (isDownload && (s === 'downloadable' || s === 'downloading' || l === 'downloadable' || l === 'downloading')) {
-    box.textContent = '⏳ 已触发下载，请稍候；完成后再次点击「检查」确认状态。';
-  } else {
-    box.textContent = `Summarizer: ${fmt(s)} ｜ LanguageModel: ${fmt(l)}` + (ready ? '（可直接使用）' : '（点击上方按钮触发下载）');
-  }
+// 任一模型就绪即视为“可用”（不要求两者同时就绪）
+function isChromeAIUsable(a) {
+  const ok = (v) => v === 'ready' || v === 'available';
+  return ok(a.summarizer) || ok(a.languageModel);
 }
 
-// 检查 Chrome 内置 AI 可用性（切到面板时自动调用）；不阻塞，仅展示状态
-async function checkChromeAIStatus() {
+function renderChromeAIStatus(box, a, isDownload) {
+  const ok = (v) => v === 'ready' || v === 'available';
+  const s = a.summarizer, l = a.languageModel;
+  const sReady = ok(s), lReady = ok(l);
+  const usable = sReady || lReady;
+  box.className = 'test-status ' + (usable ? 'ok' : '');
+  box.style.background = usable ? '#e6f4ea' : '#fef7e0';
+  box.style.color = usable ? '#1e7e34' : '#8a6d00';
+  const fmt = (v) => ok(v) ? '✅ 就绪' : (v === 'downloadable' ? '⬇️ 可下载' : (v === 'downloading' ? '⬇️ 下载中' : (v === 'unavailable' ? '❌ 不可用' : (v === 'n/a' ? '—' : v))));
+  if (usable) {
+    let note = '（摘要/要点可设备端运行）';
+    if (sReady && lReady) note = '（摘要/解释/翻译/追问均可设备端运行）';
+    else if (lReady) note = '（Prompt 可用；摘要将走 Prompt API）';
+    else note = '（摘要/要点可设备端运行；解释/翻译/追问将自动回退云端）';
+    box.textContent = `Summarizer: ${fmt(s)} ｜ LanguageModel: ${fmt(l)} ${note}`;
+    return;
+  }
+  if (isDownload && (s === 'downloadable' || s === 'downloading' || l === 'downloadable' || l === 'downloading')) {
+    box.textContent = '⏳ 正在下载设备端模型（约 1.5GB），请稍候；完成后会自动变为「就绪」。过程中请勿关闭该网页标签页。';
+    return;
+  }
+  box.textContent = `Summarizer: ${fmt(s)} ｜ LanguageModel: ${fmt(l)}（点击上方按钮触发下载）`;
+}
+
+let chromeAiPollTimer = null;
+function stopChromeAIPoll() { if (chromeAiPollTimer) { clearInterval(chromeAiPollTimer); chromeAiPollTimer = null; } }
+
+// 查询并刷新状态（轮询时复用）
+async function refreshChromeAIStatus() {
   const box = $('check-chrome');
-  box.className = 'test-status';
-  box.style.display = 'block';
-  box.style.background = '#eef'; box.style.color = '#555';
-  box.textContent = '⏳ 正在检查 Chrome 内置 AI…';
   try {
     const a = await queryActiveTabChromeAI('chromeAiAvailability');
     renderChromeAIStatus(box, a, false);
+    return a;
   } catch (e) {
     box.className = 'test-status err';
     box.textContent = '❌ ' + e.message;
+    return null;
   }
 }
 
-// 「检查/下载 Chrome 内置模型」按钮：触发下载（首次约 1.7GB，需耐心）
+function startChromeAIPoll() {
+  stopChromeAIPoll();
+  chromeAiPollTimer = setInterval(async () => {
+    const a = await refreshChromeAIStatus();
+    if (a && isChromeAIUsable(a)) stopChromeAIPoll(); // 任一模型就绪即停止轮询
+  }, 2500);
+}
+
+// 检查 Chrome 内置 AI 可用性（切到面板时自动调用）
+function checkChromeAIStatus() {
+  const box = $('check-chrome');
+  box.style.display = 'block';
+  box.className = 'test-status'; box.style.background = '#eef'; box.style.color = '#555';
+  box.textContent = '⏳ 正在检查 Chrome 内置 AI…';
+  refreshChromeAIStatus();
+}
+
+// 「检查/下载 Chrome 内置模型」按钮：触发下载（首次约 1.5GB），随后轮询真实状态
 $('chrome-check').addEventListener('click', () => {
   const box = $('check-chrome');
-  box.className = 'test-status';
   box.style.display = 'block';
-  box.style.background = '#eef'; box.style.color = '#555';
-  box.textContent = '⏳ 正在触发模型下载（首次约 1.7GB，请耐心等待）…';
+  box.className = 'test-status'; box.style.background = '#eef'; box.style.color = '#555';
+  box.textContent = '⏳ 正在触发设备端模型下载（约 1.5GB，请勿关闭该网页标签页）…';
   queryActiveTabChromeAI('chromeAiDownload')
-    .then((a) => renderChromeAIStatus(box, a, true))
+    .then((a) => {
+      renderChromeAIStatus(box, a, true);
+      startChromeAIPoll(); // 触发后开始轮询，实时显示 下载中 → 就绪
+    })
     .catch((e) => {
       box.className = 'test-status err';
       box.textContent = '❌ ' + e.message;

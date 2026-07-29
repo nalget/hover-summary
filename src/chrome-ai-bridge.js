@@ -109,19 +109,26 @@
     return out;
   }
 
-  // 触发下载（downloadable/downloading 时创建即触发下载，等待 ready）：供弹窗“下载”按钮使用
+  // 触发下载（downloadable/downloading 时 create 即启动设备端模型下载，浏览器级、后台继续；
+  // 此处不阻塞等待下载完成——弹窗通过轮询 availability() 实时观察 下载中→就绪）
   async function downloadChromeAI() {
     const Sum = window.Summarizer, LM = window.LanguageModel;
     const out = { summarizer: 'n/a', languageModel: 'n/a' };
+    const trigger = (factory, opts) => {
+      // 启动下载：创建会话后，模型下载在后台进行；下载完成(.ready)后销毁会话即可（模型已缓存浏览器级）
+      factory(opts).then((s) => {
+        if (s && s.ready) s.ready.catch(() => {}).finally(() => { try { s.destroy && s.destroy(); } catch (e) {} });
+        else if (s && s.destroy) { try { s.destroy(); } catch (e) {} }
+      }).catch(() => {});
+    };
     if (Sum) {
       try {
         const a = await Sum.availability({ type: 'tldr', format: 'markdown', length: 'short' }).catch(() => 'unavailable');
         out.summarizer = a;
         if (a === 'downloadable' || a === 'downloading') {
-          const s = await Sum.create({ type: 'tldr', format: 'markdown', length: 'short', monitor(m) { m.addEventListener('downloadprogress', () => {}); } });
-          if (s.ready) await s.ready;
-          if (s.destroy) s.destroy();
-          out.summarizer = 'ready';
+          trigger((o) => Sum.create(Object.assign({ monitor(m) { m.addEventListener('downloadprogress', () => {}); } }, o)),
+            { type: 'tldr', format: 'markdown', length: 'short' });
+          out.summarizer = (a === 'downloading') ? 'downloading' : 'downloadable';
         }
       } catch (e) { out.summarizer = 'error: ' + e.message; }
     }
@@ -130,10 +137,8 @@
         const a = await LM.availability().catch(() => 'unavailable');
         out.languageModel = a;
         if (a === 'downloadable' || a === 'downloading') {
-          const s = await LM.create({ monitor(m) { m.addEventListener('downloadprogress', () => {}); } });
-          if (s.ready) await s.ready;
-          if (s.destroy) s.destroy();
-          out.languageModel = 'ready';
+          trigger((o) => LM.create(Object.assign({ monitor(m) { m.addEventListener('downloadprogress', () => {}); } }, o)), {});
+          out.languageModel = (a === 'downloading') ? 'downloading' : 'downloadable';
         }
       } catch (e) { out.languageModel = 'error: ' + e.message; }
     }
