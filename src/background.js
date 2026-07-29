@@ -20,7 +20,7 @@ const DEFAULT_CONFIG = {
   duplicateCheck: true, // 悬停时并行检测换皮
   duplicateEndpoint: 'http://127.0.0.1:8765', // 本地换皮检测服务
   agnes: {
-    endpoint: 'https://apihub.agnes-ai.com/v1/chat/completions',
+    endpoint: 'https://apihub.agnes-ai.cn/v1/chat/completions',
     apiKey: '',
     model: 'agnes-2.0-flash'
   },
@@ -129,8 +129,10 @@ async function getConfig() {
   if (cfg.local && cfg.local.model === 'Gemma-4-E4B-4bit') {
     cfg.local.model = '';
   }
-  // 迁移：旧版默认 model 是 public，如果没对应 key 就切到 nvidia
-  if (cfg.model === 'public' && !(cfg.public && cfg.public.apiKey)) {
+  // 迁移：旧版默认 model 是 public；仅当所选公开预设本身就需要 Key 且未填 Key 时才回退到 nvidia。
+  // 免密钥预设（如 Pollinations）即使无 Key 也应保留 public，否则会被错误切走，导致「未配置 API Key」。
+  const _pubPreset = PUBLIC_PRESETS[cfg.public && cfg.public.preset];
+  if (cfg.model === 'public' && _pubPreset && _pubPreset.needKey && !(cfg.public && cfg.public.apiKey)) {
     cfg.model = 'nvidia';
   }
   // 一次性持久化迁移

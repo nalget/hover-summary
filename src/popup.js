@@ -13,7 +13,7 @@ const DEFAULT_CONFIG = {
   bubbleHideDelay: 3000, // 鼠标离开气泡后的保留(淡出)时间 ms（默认约 3 秒）
   duplicateCheck: true,
   duplicateEndpoint: 'http://127.0.0.1:8765',
-  agnes: { endpoint: 'https://apihub.agnes-ai.com/v1/chat/completions', apiKey: '', model: 'agnes-2.0-flash' },
+  agnes: { endpoint: 'https://apihub.agnes-ai.cn/v1/chat/completions', apiKey: '', model: 'agnes-2.0-flash' },
   nvidia: { endpoint: 'https://integrate.api.nvidia.com/v1/chat/completions', apiKey: '', model: 'openai/gpt-oss-120b' },
   local: { endpoint: 'http://127.0.0.1:8000/v1/chat/completions', apiKey: '', model: '' },
   chrome: {}, // Chrome 内置 AI（Gemini Nano）：无需 endpoint / Key / 模型选择
