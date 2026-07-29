@@ -325,6 +325,31 @@ function getMeaningfulTarget(el) {
   return null;
 }
 
+// JS 渲染站点（X/Twitter / Facebook 等）抓取不到远端正文时，从当前页面的实时 DOM
+// 把链接所在「帖子/文章」的正文抠出来做摘要——内容脚本本身就跑在该页面上，能拿到真实文本。
+// 这比“用链接文字/写干不了”有用得多：悬停一条推文里的外链，总结的是这条推文本身。
+function extractPostContext(anchorEl) {
+  if (!anchorEl || !anchorEl.closest) return null;
+  // 1) 定位帖子容器：X/Twitter 的 <article data-testid="tweet">，其它站点的 article / role=article
+  const root =
+    anchorEl.closest('article[data-testid="tweet"]') ||
+    anchorEl.closest('[data-testid="tweet"]') ||
+    anchorEl.closest('article') ||
+    anchorEl.closest('[role="article"]') ||
+    anchorEl.closest('.post, .tweet, .comment, .message, .status, .article');
+  if (!root) return null;
+  // 2) 优先取帖子正文段落（X/Twitter 的 tweetText），否则整帖文本
+  const body =
+    root.querySelector('[data-testid="tweetText"]') ||
+    root.querySelector('.tweet-text, [data-testid="messageEntry"], .post-text, .comment-body, .status-text');
+  let txt = (body || root).textContent || '';
+  // 3) 去掉被悬停链接自身的文字（一般是 URL / 卡片标题），避免重复
+  const linkText = (anchorEl.textContent || '').trim();
+  if (linkText) txt = txt.split(linkText).join(' ');
+  txt = txt.replace(/\s+/g, ' ').trim();
+  return txt.length >= 20 ? txt : null;
+}
+
 // ── 预取：悬停初期就发请求，模型返回后再弹气泡（不在中途弹“加载中”） ────
 
 // 抓取链接目标页面内容（经 background 绕开 CORS），供链接摘要使用
@@ -373,10 +398,13 @@ function startPrefetch(text, href) {
         runSummarize();
       })
       .catch((err) => {
-        // 动态站点（X/Twitter 等）需 JS 渲染，无法抓取正文：温和提示 + 退回用链接可见文字摘要，不报错
+        // 动态站点（X/Twitter 等）需 JS 渲染，抓取不到远端正文：
+        // 直接从当前页面的实时 DOM 抠出「链接所在帖子/文章」的正文做摘要（内容脚本能拿到真实文本），
+        // 而不是只写“干不了”。拿不到帖子正文时退回用链接可见文字。
         if (err && /JS_REQUIRED/i.test(err.message)) {
-          pf.jsNotice = '⚠️ 该页面需 JavaScript 渲染（X / Twitter 等），无法获取正文，已改用链接文本摘要。';
-          runSummarize(); // 用锚文本(链接可见文字)做摘要
+          const ctx = extractPostContext(activeTarget);
+          if (ctx) pf.text = ctx.slice(0, config.maxLength || 2000); // 用页面帖子正文做摘要（无声成功）
+          runSummarize();
         } else {
           runSummarize(); // 其它抓取失败：退回用锚文本摘要
         }
