@@ -1,17 +1,23 @@
 {
   "name": "hover-summary",
-  "version": "1.0.0",
-  "description": "在任意网页悬停文字，自动弹出 AI 摘要。支持多模型切换。",
-  "main": "index.js",
-  "directories": {
-    "test": "test"
-  },
+  "version": "1.4.9",
+  "private": true,
+  "description": "在任意网页划词或悬停链接，自动弹出 AI 摘要浮窗。支持摘要/要点/解释/翻译/追问五种模式，Agnes、NVIDIA NIM、本地 oMLX 等多模型后端切换。",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node test/content-hover-e2e.mjs",
+    "test:local": "node test/local-models-e2e.mjs",
+    "pack": "bash pack.sh"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "chrome-extension",
+    "manifest-v3",
+    "ai-summary",
+    "hover",
+    "llm",
+    "browser-extension"
+  ],
+  "author": "Hover Summary contributors",
+  "license": "MIT",
   "dependencies": {
     "puppeteer-core": "^25.3.0"
   }

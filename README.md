@@ -83,6 +83,8 @@ hover-summary/
 ├── icons/                 # 16/48/128 图标
 ├── test/                  # puppeteer 端到端测试
 ├── README.md
+├── CHANGELOG.md          # 版本历史（v1.4.0 → v1.4.9）
+├── ROADMAP.md            # 拓展 / 完善路线图
 ├── PRIVACY.md             # 隐私政策（商店必填）
 └── LICENSE
 ```
