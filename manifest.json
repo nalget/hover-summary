@@ -6,7 +6,7 @@
   "permissions": ["storage", "activeTab", "scripting", "commands", "tabs"],
   "host_permissions": [
     "<all_urls>",
-    "https://apihub.agnes-ai.com/*",
+    "https://apihub.agnes-ai.cn/*",
     "https://integrate.api.nvidia.com/*",
     "https://api.deepseek.com/*",
     "https://dashscope.aliyuncs.com/*",

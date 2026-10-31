@@ -500,8 +500,8 @@ async function handleSummarize(req, sender) {
     if (!key) return { success: false, error: `未配置 ${provider} 的 API Key`, code: 'NO_KEY' };
   }
 
-  // 非追问模式走缓存
-  const cacheKey = mode === 'followup' ? null : hashKey(provider + '|' + mode + '|' + text);
+  // 非追问模式走缓存；缓存键必须含输出语言，否则切换语言会命中旧语言的脏缓存
+  const cacheKey = mode === 'followup' ? null : hashKey(provider + '|' + mode + '|' + (config.outputLang || '') + '|' + text);
   if (cacheKey && _cache.has(cacheKey)) {
     const hit = _cache.get(cacheKey);
     return { success: true, summary: hit.summary, elapsed: 0, cached: true };
@@ -782,8 +782,8 @@ async function speedTestPublic(opts = {}) {
     if (!baiduToken) return { ok: false, error: '百度鉴权失败，请检查 client_id:client_secret', code: 'AUTH' };
   }
 
-  const results = [];
-  for (const model of list) {
+  // 并行测速：各候选模型独立请求，一次性 Promise.all，避免串行累加超时（N 个模型最多 N×20s）
+  const tests = list.map(async (model) => {
     const start = performance.now();
     try {
       const targetEp = isBaidu ? ep + (ep.includes('?') ? '&' : '?') + 'access_token=' + encodeURIComponent(baiduToken) : ep;
@@ -801,12 +801,13 @@ async function speedTestPublic(opts = {}) {
         const c = isBaidu ? (data && data.result) : (data && data.choices && data.choices[0] && (data.choices[0].message?.content || data.choices[0].text || ''));
         ok = !!(c && c.trim().length > 0);
       }
-      results.push({ model, ok, latency: elapsed, error: resp.ok ? null : `HTTP ${resp.status}` });
+      return { model, ok, latency: elapsed, error: resp.ok ? null : `HTTP ${resp.status}` };
     } catch (e) {
       const elapsed = parseFloat(((performance.now() - start) / 1000).toFixed(2));
-      results.push({ model, ok: false, latency: elapsed, error: e.name === 'AbortError' ? 'TIMEOUT' : e.message });
+      return { model, ok: false, latency: elapsed, error: e.name === 'AbortError' ? 'TIMEOUT' : e.message };
     }
-  }
+  });
+  const results = await Promise.all(tests);
 
   const okList = results.filter((r) => r.ok).sort((a, b) => a.latency - b.latency);
   return { ok: true, fastest: okList.length ? okList[0].model : null, results, preset: opts.preset || null };
